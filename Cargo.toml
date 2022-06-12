@@ -1,0 +1,23 @@
+[package]
+name = "rsetest"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libc = "0.2"
+libswe-sys = "0.2.7"
+num = "*"
+serde = { version = "1.0.102", features = ["derive"] }
+serde_json = "1.0.41"
+serde_derive = "1.0.102"
+strum = "0.17.1"
+strum_macros = "0.17.1"
+libmath = "0.2.1"
+num-derive = "0.2"
+num-traits = "0.2"
+rustc-serialize = "*"
+chrono = { version = "0.4", features = ["serde"] }
+ordered-float = { version = "3.0", default-features = false }
+clap = "3.1.18"
