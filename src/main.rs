@@ -103,21 +103,18 @@ impl fmt::Display for Preference {
 
 
 fn main() {
-  /* let iflag: i32 = SEFLG_TROPICAL.try_into().unwrap();
-  let iflag: i32 = SEFLG_TROPICAL.try_into().unwrap(); */
-  let mut prev_arg = "";
-  let mut ephemeris_path = SWEPH_PATH_DEFAULT;
-
-  let matches = App::new("AstroApi")
+  
+    let matches = App::new("AstroApi")
     .version("1.0")
     .author("Neil Gardner <neilgardner1963@gmail.com>")
     .about("Astrological calculations via Swiss Ephemeris")
-    .arg(Arg::with_name("path")
-    .short('e')
-    .long("path")
-    .value_name("ep")
-    .help("Set the path to the Ephemeris data files")
-    .takes_value(true))
+    .arg(
+      Arg::new("path")
+      .short('p')
+      .long("path")
+      .value_name("path")
+      .help("Set the path to the Ephemeris data files")
+    )
     .get_matches();
   
   let ephemeris_path = matches.value_of("path").unwrap_or(SWEPH_PATH_DEFAULT);
