@@ -96,6 +96,18 @@ temperature: number;
       daya: *mut c_double,
       serr: *mut c_char
   ) -> c_double;
+
+  // swe_set_topo(double geolon, double geolat, double geoalt);
+
+  pub fn swe_set_topo(
+    lng: c_double,
+    lat: c_double,
+    alt: c_double
+  );
+
+  // swe_set_sid_mode(sidModeNum, 0, 0);
+  pub fn swe_set_sid_mode(sid_mode: i32, t9: f64, ayan_t0: f64);
+
 }
 
 pub fn rise_trans(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, iflag: i32) -> f64 {
@@ -167,6 +179,18 @@ pub fn get_ayanamsha(tjd_ut: f64, mode: Ayanamsha) -> f64 {
       status
   };
   result
+}
+
+pub fn set_topo(lat: f64, lng: f64, alt: f64) {
+  unsafe {
+    swe_set_topo(lng, lat, alt);
+  }
+}
+
+pub fn set_sid_mode(iflag: i32) {
+  unsafe {
+    swe_set_sid_mode(iflag, 0f64, 0f64);
+  }
 }
 
 pub fn next_rise(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
@@ -296,6 +320,10 @@ impl HouseData {
         points: AscMc::new(hd.ascmc)
     }
   }
+}
+
+pub fn get_house_data(jd: f64, lat: f64, lng: f64, system: char) -> HouseData {
+  HouseData::new(jd, lat, lng, system)
 }
 
 pub fn get_ascendant(jd: f64, lat: f64, lng: f64) -> f64 {
