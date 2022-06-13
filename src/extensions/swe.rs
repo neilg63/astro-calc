@@ -15,47 +15,6 @@ pub enum TransitionParams {
   BitGeoctrNoEclLat = 128
 }
 
-
-pub enum TransitionFilter {
-  Rise = 1,
-  Set = 2,
-  Ic = 3,
-  Mc = 4,
-  RiseSet = 5,
-  McIc = 6,
-  All = 7,
-}
-
-impl TransitionFilter {
-  pub fn match_rise(self) -> bool {
-    match &self {
-      TransitionFilter::Rise | TransitionFilter::RiseSet | TransitionFilter::All => true,
-      _ => false, 
-    }
-  }
-
-  pub fn match_set(self) -> bool {
-    match &self {
-      TransitionFilter::Set | TransitionFilter::RiseSet | TransitionFilter::All => true,
-      _ => false, 
-    }
-  }
-
-  pub fn match_mc(self) -> bool {
-      match &self {
-          TransitionFilter::Mc | TransitionFilter::McIc | TransitionFilter::All => true,
-          _ => false, 
-      }
-  }
-
-  pub fn match_ic(self) -> bool {
-    match &self {
-      TransitionFilter::Ic | TransitionFilter::McIc | TransitionFilter::All => true,
-      _ => false, 
-    }
-  }
-}
-
 enum BodyAltitudes {
   EquToHor =1,
   EclToHor = 0,
@@ -193,10 +152,6 @@ pub fn azalt(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f64, lng: f64, 
   }
 }
 
-pub fn calc_altitude(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f64, lng: f64, lat: f64) -> f64 {
-  azalt(tjd_ut, is_equal, geo_lat, geo_lng, lng, lat).value
-}
-
 pub fn get_ayanamsha(tjd_ut: f64, mode: Ayanamsha) -> f64 {
   let mut daya: [f64; 1] = [0.0; 1];
   let mut serr = [0; 255];
@@ -251,19 +206,19 @@ pub fn start_jd_geo(jd: f64, lng: f64) -> f64 {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TransitSet {
-  prev_set: f64,
-  rise: f64,
-  mc: f64,
-  set: f64,
-  ic: f64,
-  next_rise: f64,
+  pub prev_set: f64,
+  pub rise: f64,
+  pub mc: f64,
+  pub set: f64,
+  pub ic: f64,
+  pub next_rise: f64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AltitudeSet {
-  azimuth: f64,
-  value: f64,
-  apparent: f64,
+  pub azimuth: f64,
+  pub value: f64,
+  pub apparent: f64,
 }
 
 
@@ -320,12 +275,12 @@ impl AscMc {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HouseData {
-  jd: f64,
-  lat: f64,
-  lng: f64,
-  system: char,
-  houses: Vec<f64>,
-  points: AscMc,
+  pub jd: f64,
+  pub lat: f64,
+  pub lng: f64,
+  pub system: char,
+  pub houses: Vec<f64>,
+  pub points: AscMc,
 }
 
 impl HouseData {

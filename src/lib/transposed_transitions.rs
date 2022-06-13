@@ -1,43 +1,19 @@
 use super::julian_date::*;
+use super::models::{geo_pos::*, graha_pos::*};
+use super::core::*;
 
 const mins_day: i32 = 1440;
 
-pub struct GrahaPos {
-  key: String,
-  lng: f64,
-  lat: f64,
-  lng_speed: f64,
-  lat_speed: f64,
-  rect_ascension: f64,
-  declination: f64,
-}
-
-impl GrahaPos {
-
-  fn new(key: &str, lng: f64, lat: f64, lng_speed: f64) -> Self {
-    GrahaPos { key: key.to_string(), lng: lng, lat, lng_speed: lng_speed }
-  }
-
-  fn fixed(key: &str, lng: f64, lat: f64) -> Self {
-    GrahaPos { key: key.to_string(), lng: lng, lat: lat, lng_speed: 0f64 }
-  }
-
-  fn basic(key: &str, lng: f64) -> Self {
-    GrahaPos { key: key.to_string(), lng: lng, lat: 0f64, lng_speed: 0f64 }
-  }
-
-}
-
-struct AltitudeSample {
-  mode: String,
-  mins: f64,
-  jd: f64,
-  value: f64,
+pub struct AltitudeSample {
+  pub mode: String,
+  pub mins: f64,
+  pub jd: f64,
+  pub value: f64,
 }
 
 impl AltitudeSample {
   
-  fn new(mode: &str, mins: f64, jd: f64, value: f64) -> Self {
+  pub fn new(mode: &str, mins: f64, jd: f64, value: f64) -> Self {
     AltitudeSample{
       mode: mode.to_string(),
       mins: mins,
@@ -46,7 +22,7 @@ impl AltitudeSample {
     }
   }
 
-  fn basic(mode: &str) -> Self {
+  pub fn basic(mode: &str) -> Self {
     AltitudeSample{
       mode: mode.to_string(),
       mins: 0f64,
@@ -55,11 +31,11 @@ impl AltitudeSample {
     }
   }
 
-  fn iso_date(&self) -> String {
+  pub fn iso_date(&self) -> String {
     return if self.jd > 0f64 { julian_day_to_iso_datetime(self.jd) } else { "".to_string() };
   }
 
-  fn set_mode(&self, mode: &str)  {
+  pub fn set_mode(&self, mode: &str)  {
     self.mode = mode.to_string();
   }
 
@@ -82,8 +58,8 @@ fn calc_mid_sample(
 ) -> AltitudeSample {
   let prev_sample = AltitudeSample::new(mode, prev_min, prev_value, prev_jd );
   let mid_point = calc_mid_point(prev_sample, item);
-  return AltitudeSample::new(mode, prev_min, mid_point, 0f64);
-};
+  AltitudeSample::new(mode, prev_min, mid_point, 0f64)
+}
 
 fn recalc_min_max_transit_sample(
   sample: AltitudeSample,
@@ -91,12 +67,12 @@ fn recalc_min_max_transit_sample(
   lng: f64,
   lat: f64,
   max_mode: bool,
-  multiplier: i8,
+  multiplier: u8,
 ) -> AltitudeSample {
   let sample_rate = 0.25f64;
   let num_sub_samples = multiplier as f64 * 2 as f64 * (1f64 / sample_rate);
-  let sample_start_jd = sample.jd - num_sub_samples / (2 / sample_rate) / mins_day;
-  let sample_start_min = sample.mins - num_sub_samples / (2 / sample_rate);
+  let sample_start_jd = sample.jd - num_sub_samples / (2f64 / sample_rate) / mins_day as f64;
+  let sample_start_min = sample.mins - num_sub_samples / (2f64 / sample_rate);
   let mode = match max_mode { 
     true => "mc",
     false => "ic",
@@ -104,9 +80,9 @@ fn recalc_min_max_transit_sample(
    };
   let max = num_sub_samples as i32 + 1;
   for i in 0..max {
-    let mins = sample_start_min + i * sample_rate;
-    let jd = sample_start_jd + (i * sample_rate) / mins_day;
-    let value = calc_altitude(jd, geo, lng, lat);
+    let mins = sample_start_min + i as f64 * sample_rate;
+    let jd = sample_start_jd + (i as f64 * sample_rate) / mins_day as f64;
+    let value = calc_altitude(jd, false, geo.lat, geo.lng, lng, lat);
     let item = AltitudeSample::new(mode, mins, jd, value);
     if max_mode && item.value > sample.value {
       sample = item;
@@ -142,28 +118,28 @@ pub enum TransitionFilter {
 }
 
 impl TransitionFilter {
-  fn match_rise(self) -> bool {
+  pub fn match_rise(self) -> bool {
       match &self {
           TransitionFilter::Rise | TransitionFilter::RiseSet | TransitionFilter::All => true,
           _ => false, 
       }
   }
 
-  fn match_set(self) -> bool {
+  pub fn match_set(self) -> bool {
       match &self {
           TransitionFilter::Set | TransitionFilter::RiseSet | TransitionFilter::All => true,
           _ => false, 
       }
   }
 
-  fn match_mc(self) -> bool {
+  pub fn match_mc(self) -> bool {
       match &self {
           TransitionFilter::Mc | TransitionFilter::McIc | TransitionFilter::All => true,
           _ => false, 
       }
   }
 
-  fn match_ic(self) -> bool {
+  pub fn match_ic(self) -> bool {
       match &self {
           TransitionFilter::Ic | TransitionFilter::McIc | TransitionFilter::All => true,
           _ => false, 
@@ -179,11 +155,11 @@ pub fn calc_transposed_object_transitions (
   lng_speed: f64,
   multiplier: u8,
   filter: TransitionFilter,
-  sample_key: String,
+  sample_key: &str,
 ) -> Vec<AltitudeSample> {
   let max = mins_day / multiplier as i32;
-  let items = [];
-  let match_set = filter.match_set()
+  let items: Vec<AltitudeSample> = Vec::new();
+  let match_set = filter.match_set();
   let match_rise = filter.match_rise();
   let match_mc = filter.match_mc();
   let match_ic = filter.match_ic();
@@ -191,9 +167,9 @@ pub fn calc_transposed_object_transitions (
   let mut rise = AltitudeSample::basic("rise");
   let mut set = AltitudeSample::basic("set");
   let mut mc = AltitudeSample::basic("mc");
-  let mut prev_value = 0;
-  let mut prev_min = 0;
-  let mut prev_jd = 0;
+  let mut prev_value = 0f64;
+  let mut prev_min = 0f64;
+  let mut prev_jd = 0f64;
   // resample the longitude and latitude speed for the moon only
   let resample_speed = sample_key == "mo" && lng_speed != 0f64;
   for i in 0..max {
@@ -201,31 +177,33 @@ pub fn calc_transposed_object_transitions (
     let dayFrac = n / mins_day as f64;
     let jd = jd_start + dayFrac;
     let mut sample_spd = lng_speed;
-    let latSpd = 0;
+    let latSpd = 0f64;
     if resample_speed {
       let sample_body = calc_body_jd(jd, sample_key, false, true);
       sample_spd = sample_body.lng_speed;
       latSpd = sample_body.lat_speed;
     }
-    let adjusted_lng = lng_speed !== 0 ? lng + sample_spd * dayFrac : lng;
-    let adjusted_lat = latSpd !== 0 ? lat + latSpd * dayFrac : lat;
-    let value = calc_altitude(jd, geo, adjusted_lng, adjusted_lat);
-    let item = AltitudeSample::new('', n,jd, value);
-    if (match_mc && value > mc.value) {
-      mc = item.set_type("mc");
+    let adjusted_lng = if lng_speed != 0f64  { lng + sample_spd * dayFrac } else { lng };
+    let adjusted_lat = if latSpd != 0f64 { lat + latSpd * dayFrac } else { lat };
+    let value = calc_altitude(jd, false, geo.lat, geo.lng, adjusted_lng, adjusted_lat);
+    let item = AltitudeSample::new("", n,jd, value);
+    if match_mc && value > mc.value {
+      item.set_mode("mc");
+      mc = item;
     }
-    if (match_ic && value < ic.value) {
-      ic = item.set_type("ic");
+    if match_ic && value < ic.value {
+      item.set_mode("ic");
+      ic = item;
     }
-    if (match_rise && prev_value < 0 && value > 0) {
+    if match_rise && prev_value < 0f64 && value > 0f64 {
       rise = calc_mid_sample(item, prev_min, prev_value, prev_jd, "rise");
-    } else if (match_set && prev_value > 0 && value < 0) {
+    } else if match_set && prev_value > 0f64 && value < 0f64 {
       set = calc_mid_sample(item, prev_min, prev_value, prev_jd, "set");
     }
-    if (!match_mc && !match_ic) {
-      if (!match_rise && match_set && set.jd > 0) {
+    if !match_mc && !match_ic {
+      if !match_rise && match_set && set.jd > 0f64 {
         break;
-      } else if (!match_set && match_rise && rise.jd > 0) {
+      } else if !match_set && match_rise && rise.jd > 0f64 {
         break;
       }
     }
@@ -234,13 +212,13 @@ pub fn calc_transposed_object_transitions (
     prev_min = n;
     prev_jd = jd;
   }
-  if (match_mc && mc.jd > 0) {
+  if match_mc && mc.jd > 0f64 {
     mc = recalc_min_max_transit_sample(mc, geo, lng, lat, true, multiplier);
   }
-  if match_ic && ic.jd > 0 {
+  if match_ic && ic.jd > 0f64 {
     ic = recalc_min_max_transit_sample(ic, geo, lng, lat, false, multiplier);
   }
-  vec![rise, set, mc, ic].iter().filter(|item| item.jd > 0)
+  vec![rise, set, mc, ic].iter().filter(|item| item.jd > 0f64).map(|item| *item).collect::<Vec<AltitudeSample>>()
 }
 
 pub fn calc_transposed_graha_transition(
@@ -258,6 +236,6 @@ pub fn calc_transposed_graha_transition(
     graha_pos.lng_speed,
     multiplier,
     filter,
-    graha_pos.key,
+    graha_pos.key.as_str(),
   )
 }

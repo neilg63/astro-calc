@@ -1,11 +1,11 @@
 use libswe_sys::sweconst::{Bodies};
 
 pub trait FromKey<T> {
-  fn from_key(&self, key: &str) -> T;
+  fn from_key(key: &str) -> T;
 }
 
 impl FromKey<Bodies> for Bodies {
-  fn from_key(&self, key: &str) -> Bodies {
+  fn from_key(key: &str) -> Bodies {
     let simple_key = key.to_lowercase();
     match simple_key.as_str() {
       "su" => Bodies::Sun,
