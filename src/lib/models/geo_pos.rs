@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 
 const default_altitude: f64 = 10f64;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub struct GeoPos {
   pub lat: f64,
   pub lng: f64,

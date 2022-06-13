@@ -1,9 +1,11 @@
+use serde::{Serialize, Deserialize};
 use super::julian_date::*;
 use super::models::{geo_pos::*, graha_pos::*};
 use super::core::*;
 
 const mins_day: i32 = 1440;
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AltitudeSample {
   pub mode: String,
   pub mins: f64,
@@ -35,7 +37,7 @@ impl AltitudeSample {
     return if self.jd > 0f64 { julian_day_to_iso_datetime(self.jd) } else { "".to_string() };
   }
 
-  pub fn set_mode(&self, mode: &str)  {
+  pub fn set_mode(&mut self, mode: &str)  {
     self.mode = mode.to_string();
   }
 
@@ -70,9 +72,10 @@ fn recalc_min_max_transit_sample(
   multiplier: u8,
 ) -> AltitudeSample {
   let sample_rate = 0.25f64;
+  let mut new_sample = sample;
   let num_sub_samples = multiplier as f64 * 2 as f64 * (1f64 / sample_rate);
-  let sample_start_jd = sample.jd - num_sub_samples / (2f64 / sample_rate) / mins_day as f64;
-  let sample_start_min = sample.mins - num_sub_samples / (2f64 / sample_rate);
+  let sample_start_jd = new_sample.jd - num_sub_samples / (2f64 / sample_rate) / mins_day as f64;
+  let sample_start_min = new_sample.mins - num_sub_samples / (2f64 / sample_rate);
   let mode = match max_mode { 
     true => "mc",
     false => "ic",
@@ -84,13 +87,13 @@ fn recalc_min_max_transit_sample(
     let jd = sample_start_jd + (i as f64 * sample_rate) / mins_day as f64;
     let value = calc_altitude(jd, false, geo.lat, geo.lng, lng, lat);
     let item = AltitudeSample::new(mode, mins, jd, value);
-    if max_mode && item.value > sample.value {
-      sample = item;
-    } else if !max_mode && item.value < sample.value {
-      sample = item;
+    if max_mode && item.value > new_sample.value {
+      new_sample = item;
+    } else if !max_mode && item.value < new_sample.value {
+      new_sample = item;
     }
   }
-  sample
+  new_sample
 }
 
 
@@ -106,7 +109,7 @@ enum Transits {
   BitGeoctrNoEclLat = 128
 }
 
-
+#[derive(Debug, Copy, Clone)]
 pub enum TransitionFilter {
   Rise = 1,
   Set = 2,
@@ -158,7 +161,7 @@ pub fn calc_transposed_object_transitions (
   sample_key: &str,
 ) -> Vec<AltitudeSample> {
   let max = mins_day / multiplier as i32;
-  let items: Vec<AltitudeSample> = Vec::new();
+  let mut items: Vec<AltitudeSample> = Vec::new();
   let match_set = filter.match_set();
   let match_rise = filter.match_rise();
   let match_mc = filter.match_mc();
@@ -177,7 +180,7 @@ pub fn calc_transposed_object_transitions (
     let dayFrac = n / mins_day as f64;
     let jd = jd_start + dayFrac;
     let mut sample_spd = lng_speed;
-    let latSpd = 0f64;
+    let mut latSpd = 0f64;
     if resample_speed {
       let sample_body = calc_body_jd(jd, sample_key, false, true);
       sample_spd = sample_body.lng_speed;
@@ -186,19 +189,18 @@ pub fn calc_transposed_object_transitions (
     let adjusted_lng = if lng_speed != 0f64  { lng + sample_spd * dayFrac } else { lng };
     let adjusted_lat = if latSpd != 0f64 { lat + latSpd * dayFrac } else { lat };
     let value = calc_altitude(jd, false, geo.lat, geo.lng, adjusted_lng, adjusted_lat);
-    let item = AltitudeSample::new("", n,jd, value);
+    let mut item = AltitudeSample::new("", n,jd, value);
     if match_mc && value > mc.value {
       item.set_mode("mc");
-      mc = item;
-    }
-    if match_ic && value < ic.value {
+      mc = item.clone();
+    } else if match_ic && value < ic.value {
       item.set_mode("ic");
-      ic = item;
+      ic = item.clone();
     }
     if match_rise && prev_value < 0f64 && value > 0f64 {
-      rise = calc_mid_sample(item, prev_min, prev_value, prev_jd, "rise");
+      rise = calc_mid_sample(item.clone(), prev_min, prev_value, prev_jd, "rise");
     } else if match_set && prev_value > 0f64 && value < 0f64 {
-      set = calc_mid_sample(item, prev_min, prev_value, prev_jd, "set");
+      set = calc_mid_sample(item.clone(), prev_min, prev_value, prev_jd, "set");
     }
     if !match_mc && !match_ic {
       if !match_rise && match_set && set.jd > 0f64 {
@@ -213,12 +215,12 @@ pub fn calc_transposed_object_transitions (
     prev_jd = jd;
   }
   if match_mc && mc.jd > 0f64 {
-    mc = recalc_min_max_transit_sample(mc, geo, lng, lat, true, multiplier);
+    mc = recalc_min_max_transit_sample(mc, geo.clone(), lng, lat, true, multiplier);
   }
   if match_ic && ic.jd > 0f64 {
-    ic = recalc_min_max_transit_sample(ic, geo, lng, lat, false, multiplier);
+    ic = recalc_min_max_transit_sample(ic, geo.clone(), lng, lat, false, multiplier);
   }
-  vec![rise, set, mc, ic].iter().filter(|item| item.jd > 0f64).map(|item| *item).collect::<Vec<AltitudeSample>>()
+  vec![rise, set, mc, ic].iter().filter(|item| item.jd > 0f64).map(|item| item.clone()).collect::<Vec<AltitudeSample>>()
 }
 
 pub fn calc_transposed_graha_transition(

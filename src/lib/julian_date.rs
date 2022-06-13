@@ -71,3 +71,7 @@ pub fn julian_day_to_datetime(jd: f64) -> NaiveDateTime {
 pub fn julian_day_to_iso_datetime(jd: f64) -> String {
   julian_day_to_datetime(jd).format("%Y-%m-%dT%H:%M:%S").to_string()
 }
+
+pub fn current_jd() -> f64 {
+  unixtime_to_julian_day(chrono::offset::Utc::now().timestamp())
+}

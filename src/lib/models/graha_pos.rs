@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub struct GrahaPos {
   pub key: String,
   pub lng: f64,

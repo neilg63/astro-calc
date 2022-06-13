@@ -25,6 +25,7 @@ use lib::settings::{ayanamshas::*,graha_values::*};
 use extensions::swe::*;
 use lib::transposed_transitions::*;
 use lib::core::*;
+use lib::models::geo_pos::*;
 
 const SWEPH_PATH_DEFAULT: &str = "/Users/neil/apps/findingyou/findingyou-api/src/astrologic/ephe";
 
@@ -224,5 +225,15 @@ fn main() {
   for n in 0..max {
     println!("{}", n);
   }
+
+  let geo = GeoPos::new(56.1, -3.4, 100.0);
+
+  let gr = calc_body_jd(julian_day_ut, "sa", false, false);
+
+  println!("sa: {:?}", gr);
+  let curr_jd = current_jd();
+  let tr_pos = calc_transposed_graha_transition(curr_jd,geo, gr, TransitionFilter::All, 5);
+
+  println!("curr jd: {}, transitions: {:?}", curr_jd, tr_pos);
 
 }
