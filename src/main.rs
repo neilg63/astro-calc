@@ -151,7 +151,8 @@ fn main() {
   println!("currjd: {} start jd {}", julian_day_ut, start_jd);
 
   let transit_set = calc_transit_set(julian_day_ut, Bodies::Sun,  56.1f64, -3.4f64);
-  println!("transits: {:?}", transit_set);
+  let dt = julian_day_to_iso_datetime(julian_day_ut);
+  println!("transits on {}: {:?}", dt, transit_set);
 
 
   let aya = get_ayanamsha(julian_day_ut, Ayanamsha::TrueCitra);
@@ -240,5 +241,18 @@ fn main() {
   let topo_result = calc_body_jd_topo(julian_day_ut, "me", geo);
 
   println!("topo me: {:?}", topo_result);
+
+
+  let eq_result = calc_body_eq_jd(julian_day_ut, "me", false);
+
+  println!("eq result: {:?}", eq_result);
+
+  let dual_result = calc_body_dual_jd(julian_day_ut, "me", false);
+
+  println!("dual result: {:?}", dual_result);
+
+  let dual_result = get_bodies_dual_geo(julian_day_ut, vec!["su", "mo", "me", "ve", "ma", "ju", "sa", "ur", "ne", "pl"]);
+
+  println!("dual result: {:?}", dual_result);
 
 }

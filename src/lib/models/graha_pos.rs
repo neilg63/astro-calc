@@ -15,15 +15,27 @@ impl GrahaPos {
     GrahaPos { key: key.to_string(), lng: lng, lat, lng_speed: lng_speed, lat_speed: lat_speed, rect_ascension: 0f64, declination: 0f64 }
   }
 
-  pub fn new_eq(key: &str, lng: f64, lat: f64, lng_speed: f64, lat_speed: f64, rect_ascension: f64, declination: f64) -> Self {
+  pub fn new_eq(key: &str, rect_ascension: f64, declination: f64, lng_speed: f64, lat_speed: f64) -> Self {
     GrahaPos { 
       key: key.to_string(),
-      lng: lng, 
+      lng: 0f64, 
+      lat: 0f64,
+      lng_speed,
+      lat_speed,
+      rect_ascension,
+      declination
+    }
+  }
+
+  pub fn new_both(key: &str, lng: f64, lat: f64, rect_ascension: f64, declination: f64, lng_speed: f64, lat_speed: f64) -> Self {
+    GrahaPos { 
+      key: key.to_string(),
+      lng, 
       lat,
-      lng_speed: lng_speed,
-      lat_speed:lat_speed,
-      rect_ascension: rect_ascension,
-      declination: declination
+      lng_speed,
+      lat_speed,
+      rect_ascension,
+      declination
     }
   }
 

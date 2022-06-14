@@ -1,5 +1,6 @@
 use libswe_sys::sweconst::{Bodies};
 use super::super::traits::*;
+use serde::{Serialize, Deserialize};
 
 impl FromKey<Bodies> for Bodies {
   fn from_key(key: &str) -> Bodies {
@@ -27,4 +28,32 @@ impl FromKey<Bodies> for Bodies {
       _ => Bodies::Earth,
     }
   }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GrahaInfo {
+  num: u8,
+  jy_num: u8,
+  key: String,
+  icon: String,
+  nature: Vec<String>,
+  gender: char,
+  bhuta: String,
+  guna: String,
+  caste: u8,
+  dhatu: u8,
+  dosha: Vec<String>,
+  friends: Vec<String>,
+  neutral: Vec<String>,
+  enemies: Vec<String>,
+  #[serde(rename="ownSign")]
+  own_sign: Vec<u8>,
+  #[serde(rename="exaltedDegree")]
+  exalted_degree: u16,
+  #[serde(rename="mulaTrikon")]
+  mula_trikon: u8,
+  #[serde(rename="mulaTrikonDegrees")]
+  mula_trikon_degrees: Vec<u16>,
+  #[serde(rename="charaKarakaReverse")]
+  chara_karaka_reverse: bool,
 }

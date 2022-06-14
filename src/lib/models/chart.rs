@@ -141,11 +141,16 @@ impl Graha {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Rashi {
+  #[serde(rename="houseNum")]
   house_num: u8,
   sign: u8,
+  #[serde(rename="lordInHouse")]
   lord_in_house: u8,
+  #[serde(rename="arudhaInHouse")]
   arudha_in_house: u8,
+  #[serde(rename="arudhaInSign")]
   arudha_in_sign: u8,
+  #[serde(rename="arudhaLord")]
   arudha_lord: String,
 }
 
@@ -212,16 +217,21 @@ impl Subject {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ITime {
   year: i32,
-  dayNum: i32,
+  #[serde(rename="dayNum")]
+  day_num: i32,
   progress: f64,
-  dayLength: f64,
-  isDayTime: bool,
-  dayBefore: bool,
+  #[serde(rename="dayLength")]
+  day_length: f64,
+  #[serde(rename="isDayTime")]
+  is_day_time: bool,
+  #[serde(rename="dayBefore")]
+  day_before: bool,
   muhurta: i8,
   ghati: i8,
   vighati: i8,
   lipta: f64,
-  weekDayNum: i8,
+  #[serde(rename="weekDayNum")]
+  week_day_num: i8,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

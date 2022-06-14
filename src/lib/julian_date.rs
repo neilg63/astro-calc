@@ -19,7 +19,7 @@ impl JulianDayEpoch {
  */
 pub fn iso_string_to_datetime(dt: &str) -> NaiveDateTime {
   let dt_base = if dt.contains('.') { dt.split(".").next().unwrap() } else { dt };
-  let clean_dt = dt_base.replace("T", " ");
+  let clean_dt = dt_base.replace("T", " ").trim().to_string();
   let mut dt_parts = clean_dt.split(" ");
   let date_part = if clean_dt.clone().contains(" ") { dt_parts.next().unwrap().to_string() } else { clean_dt.clone() };
   let time_part = if clean_dt.clone().contains(" ") { dt_parts.next().unwrap().to_string() } else { "".to_string() };
