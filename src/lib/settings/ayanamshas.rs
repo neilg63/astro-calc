@@ -1,5 +1,6 @@
 use serde::{Serialize, Deserialize};
 use std::fmt::{Display, Formatter, Result};
+use super::super::traits::*;
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub enum Ayanamsha {
@@ -24,30 +25,7 @@ pub enum Ayanamsha {
 }
 
 impl Ayanamsha {
-  pub fn from_key(key: &str) -> Self {
-    let simple_str = key.to_lowercase().replace("_", "");
-    match simple_str.as_str() {
-      "truecitra" | "citra" | "chitra" => Ayanamsha::TrueCitra,
-      "lahiri" => Ayanamsha::Lahiri,
-      "krishnamurti" => Ayanamsha::Krishnamurti,
-      "yukteshwar" => Ayanamsha::Yukteshwar,
-      "raman" => Ayanamsha::Raman,
-      "valensmoon" => Ayanamsha::ValensMoon,
-      "truemula" => Ayanamsha::TrueMula,
-      "truerevati" => Ayanamsha::TrueRevati,
-      "truepushya" | "pushya" => Ayanamsha::TruePushya,
-      "truesheoran" => Ayanamsha::TrueSheoran,
-      "aldebaran15tau" => Ayanamsha::Aldebaran15Tau,
-      "galcenmulawilhelm" => Ayanamsha::GalcentMulaWilhelm,
-      "galcentcochrane" => Ayanamsha::GalcentCochrane,
-      "hipparchos" => Ayanamsha::Hipparchos,
-      "sassanian" => Ayanamsha::Sassanian,
-      "ushashashi" => Ayanamsha::Ushashashi,
-      "jnbhasin" => Ayanamsha::JnBhasin,
-      _ => Ayanamsha::Tropical,
-    }
-  }
-
+  
   pub fn as_string(&self) -> String {
     match self {
       Ayanamsha::TrueCitra => "true_citra",
@@ -80,4 +58,30 @@ impl Display for Ayanamsha {
   fn fmt(&self, f: &mut Formatter) -> Result {
     write!(f, "{}", self.as_string())
   } 
+}
+
+impl FromKey<Ayanamsha> for Ayanamsha {
+  fn from_key(key: &str) -> Self {
+    let simple_str = key.to_lowercase().replace("_", "");
+    match simple_str.as_str() {
+      "truecitra" | "citra" | "chitra" => Ayanamsha::TrueCitra,
+      "lahiri" => Ayanamsha::Lahiri,
+      "krishnamurti" => Ayanamsha::Krishnamurti,
+      "yukteshwar" => Ayanamsha::Yukteshwar,
+      "raman" => Ayanamsha::Raman,
+      "valensmoon" => Ayanamsha::ValensMoon,
+      "truemula" => Ayanamsha::TrueMula,
+      "truerevati" => Ayanamsha::TrueRevati,
+      "truepushya" | "pushya" => Ayanamsha::TruePushya,
+      "truesheoran" => Ayanamsha::TrueSheoran,
+      "aldebaran15tau" => Ayanamsha::Aldebaran15Tau,
+      "galcenmulawilhelm" => Ayanamsha::GalcentMulaWilhelm,
+      "galcentcochrane" => Ayanamsha::GalcentCochrane,
+      "hipparchos" => Ayanamsha::Hipparchos,
+      "sassanian" => Ayanamsha::Sassanian,
+      "ushashashi" => Ayanamsha::Ushashashi,
+      "jnbhasin" => Ayanamsha::JnBhasin,
+      _ => Ayanamsha::Tropical,
+    }
+  }
 }

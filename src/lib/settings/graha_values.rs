@@ -1,8 +1,5 @@
 use libswe_sys::sweconst::{Bodies};
-
-pub trait FromKey<T> {
-  fn from_key(key: &str) -> T;
-}
+use super::super::traits::*;
 
 impl FromKey<Bodies> for Bodies {
   fn from_key(key: &str) -> Bodies {

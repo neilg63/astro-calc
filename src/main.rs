@@ -236,4 +236,9 @@ fn main() {
 
   println!("curr jd: {}, transitions: {:?}", curr_jd, tr_pos);
 
+
+  let topo_result = calc_body_jd_topo(julian_day_ut, "me", geo);
+
+  println!("topo me: {:?}", topo_result);
+
 }
