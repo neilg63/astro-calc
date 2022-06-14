@@ -1,10 +1,15 @@
-#[derive(Debug, Clone)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GrahaPos {
   pub key: String,
   pub lng: f64,
   pub lat: f64,
+  #[serde(rename="lngSpeed")]
   pub lng_speed: f64,
+  #[serde(rename="latSpeed")]
   pub lat_speed: f64,
+  #[serde(rename="rectAscension")]
   pub rect_ascension: f64,
   pub declination: f64,
 }
