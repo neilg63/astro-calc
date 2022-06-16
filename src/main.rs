@@ -23,7 +23,7 @@ use lib::julian_date::*;
 use lib::utils::minmax::*;
 use lib::settings::{ayanamshas::*,graha_values::*};
 use extensions::swe::*;
-use lib::transposed_transitions::*;
+use lib::{transposed_transitions::*, transitions::*};
 use lib::core::*;
 use lib::models::geo_pos::*;
 
@@ -150,7 +150,7 @@ fn main() {
   let start_jd = start_jd_geo(julian_day_ut, 15f64);
   println!("currjd: {} start jd {}", julian_day_ut, start_jd);
 
-  let transit_set = calc_transit_set(julian_day_ut, Bodies::Sun,  56.1f64, -3.4f64);
+  let transit_set = calc_transition_set(julian_day_ut, Bodies::Sun,  56.1f64, -3.4f64);
   let dt = julian_day_to_iso_datetime(julian_day_ut);
   println!("transits on {}: {:?}", dt, transit_set);
 
@@ -255,4 +255,23 @@ fn main() {
 
   println!("dual result: {:?}", dual_result);
 
+  let dual_result_topo = get_bodies_dual_topo(julian_day_ut, vec!["su", "mo", "me", "ve", "ma", "ju", "sa", "ur", "ne", "pl"], geo);
+
+  println!("dual result topo: {:?}", dual_result_topo);
+
+  let now_jd = current_jd();
+  let transition_sets = get_transition_sets(now_jd, vec!["su", "mo", "ve", "ma"], geo);
+
+  println!("transition sets: {:?}", serde_json::to_string(&transition_sets).unwrap() );
+
+  let ma_positions = calc_body_positions_jd_geo(julian_day_ut, "ma", 100, 2f64);
+  println!("mars positions: {:?}", ma_positions);
+
+  let future = datetime_to_julian_day("2023-09-25");
+  let bodies_positions = calc_bodies_positions_jd_geo(future, vec!["su", "mo", "me", "ve", "ma", "ju", "sa"], 50, 4f64);
+  println!("body positions at {}: {:?}", future, bodies_positions);
+
+  let past_jd = datetime_to_julian_day("1972-03-21");
+  let transposed_positions = calc_transposed_graha_transitions_from_source_refs_geo(julian_day_ut, geo, past_jd, vec!["su", "mo", "me", "ve", "ma", "ju", "sa"]);
+  println!("body positions at {}: {:?}", past_jd, transposed_positions);
 }

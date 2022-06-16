@@ -1,7 +1,8 @@
 use serde::{Serialize, Deserialize};
 use super::julian_date::*;
 use super::models::{geo_pos::*, graha_pos::*};
-use super::core::*;
+use super::{traits::*, models::{general::*}};
+use super::{core::{calc_altitude,calc_body_jd, calc_body_jd_geo, calc_body_jd_topo}};
 
 const mins_day: i32 = 1440;
 
@@ -39,6 +40,10 @@ impl AltitudeSample {
 
   pub fn set_mode(&mut self, mode: &str)  {
     self.mode = mode.to_string();
+  }
+
+  pub fn to_key_num(&self) -> KeyNumValue {
+    KeyNumValue::new(self.mode.as_str(), self.jd)
   }
 
 }
@@ -94,19 +99,6 @@ fn recalc_min_max_transit_sample(
     }
   }
   new_sample
-}
-
-
-
-enum Transits {
-  Rise = 1,
-  Set = 2,
-  Mc = 4,
-  Ic = 8,
-  Center = 256,
-  Bottom = 8192,
-  BitNoRefraction = 512,
-  BitGeoctrNoEclLat = 128
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -177,17 +169,17 @@ pub fn calc_transposed_object_transitions (
   let resample_speed = sample_key == "mo" && lng_speed != 0f64;
   for i in 0..max {
     let n = i as f64 * multiplier as f64;
-    let dayFrac = n / mins_day as f64;
-    let jd = jd_start + dayFrac;
+    let day_frac = n / mins_day as f64;
+    let jd = jd_start + day_frac;
     let mut sample_spd = lng_speed;
-    let mut latSpd = 0f64;
+    let mut lat_spd = 0f64;
     if resample_speed {
       let sample_body = calc_body_jd(jd, sample_key, false, true);
       sample_spd = sample_body.lng_speed;
-      latSpd = sample_body.lat_speed;
+      lat_spd = sample_body.lat_speed;
     }
-    let adjusted_lng = if lng_speed != 0f64  { lng + sample_spd * dayFrac } else { lng };
-    let adjusted_lat = if latSpd != 0f64 { lat + latSpd * dayFrac } else { lat };
+    let adjusted_lng = if lng_speed != 0f64  { lng + sample_spd * day_frac } else { lng };
+    let adjusted_lat = if lat_spd != 0f64 { lat + lat_spd * day_frac } else { lat };
     let value = calc_altitude(jd, false, geo.lat, geo.lng, adjusted_lng, adjusted_lat);
     let mut item = AltitudeSample::new("", n,jd, value);
     if match_mc && value > mc.value {
@@ -240,4 +232,73 @@ pub fn calc_transposed_graha_transition(
     filter,
     graha_pos.key.as_str(),
   )
+}
+
+/*
+  Calculate transposed transitions from a set of pre-calculated real celestial body positions
+  This is useful when working with existing chart data for things like natal transitions
+*/
+pub fn calc_transposed_graha_transitions_from_source_positions(jd_start: f64, geo: GeoPos, graha_positions: Vec<GrahaPos>) -> Vec<KeyNumValueSet> {
+  let mut key_num_sets: Vec<KeyNumValueSet> = Vec::new();
+  for graha_pos in graha_positions {
+    let tr_samples: Vec<AltitudeSample> = calc_transposed_object_transitions(
+      jd_start,
+      geo,
+      graha_pos.lng,
+      graha_pos.lat,
+      graha_pos.lng_speed,
+      5,
+      TransitionFilter::All,
+      graha_pos.key.as_str(),
+    );
+    let tr_key_set: KeyNumValueSet = KeyNumValueSet::new(graha_pos.key.as_str(), tr_samples.iter().map(|tr| tr.to_key_num()).collect());
+    key_num_sets.push(tr_key_set);
+  }
+  key_num_sets
+}
+
+/*
+  Calculate transposed transitions from a set of real body positions with a different time and place
+*/
+pub fn calc_transposed_graha_transitions_from_source_refs_topo(jd_start: f64, geo: GeoPos, jd_historic: f64, geo_historic: GeoPos, keys: Vec<&str>) -> Vec<KeyNumValueSet> {
+  let mut key_num_sets: Vec<KeyNumValueSet> = Vec::new();
+  for key in keys {
+    let graha_pos = calc_body_jd_topo(jd_historic, key, geo_historic);
+    let tr_samples: Vec<AltitudeSample> = calc_transposed_object_transitions(
+      jd_start,
+      geo,
+      graha_pos.lng,
+      graha_pos.lat,
+      graha_pos.lng_speed,
+      5,
+      TransitionFilter::All,
+      graha_pos.key.as_str(),
+    );
+    let tr_key_set: KeyNumValueSet = KeyNumValueSet::new(graha_pos.key.as_str(), tr_samples.iter().map(|tr| tr.to_key_num()).collect());
+    key_num_sets.push(tr_key_set);
+  }
+  key_num_sets
+}
+
+/*
+  Calculate transposed transitions from a set of real body positions with a different time with geocentric positions
+*/
+pub fn calc_transposed_graha_transitions_from_source_refs_geo(jd_start: f64, geo: GeoPos, jd_historic: f64, keys: Vec<&str>) -> Vec<KeyNumValueSet> {
+  let mut key_num_sets: Vec<KeyNumValueSet> = Vec::new();
+  for key in keys {
+    let graha_pos = calc_body_jd_geo(jd_historic, key);
+    let tr_samples: Vec<AltitudeSample> = calc_transposed_object_transitions(
+      jd_start,
+      geo,
+      graha_pos.lng,
+      graha_pos.lat,
+      graha_pos.lng_speed,
+      5,
+      TransitionFilter::All,
+      graha_pos.key.as_str(),
+    );
+    let tr_key_set: KeyNumValueSet = KeyNumValueSet::new(graha_pos.key.as_str(), tr_samples.iter().map(|tr| tr.to_key_num()).collect());
+    key_num_sets.push(tr_key_set);
+  }
+  key_num_sets
 }

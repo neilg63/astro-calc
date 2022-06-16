@@ -1,6 +1,7 @@
+use math::round::{floor};
 use libswe_sys::sweconst::{Bodies, OptionalFlag};
 use libswe_sys::swerust::{handler_swe03::*};
-use super::settings::{ayanamshas::*, graha_values::*};
+use super::settings::{ayanamshas::*};
 use super::traits::*;
 use super::models::{graha_pos::*, geo_pos::*};
 use super::super::extensions::swe::{azalt, set_topo, set_sid_mode};
@@ -83,6 +84,42 @@ pub fn calc_body_jd_geo(jd: f64, key: &str) -> GrahaPos {
 }
 
 /*
+ Get set of tropical geocentric coordinates for one celestial body
+*/
+pub fn calc_body_positions_jd_geo(jd_start: f64, key: &str, days: i32, num_per_day: f64) -> Vec<GrahaPosItem> {
+  let mut items: Vec<GrahaPosItem> = Vec::new();
+  let max_f64 = floor(days as f64 * num_per_day, 0);
+  let max = max_f64 as i32;
+  let increment = 1f64 / num_per_day;
+  for i in 0..max {
+    let curr_jd = jd_start + (i as f64 * increment);
+    let graha_pos = calc_body_jd_geo(curr_jd, key);
+    items.push(GrahaPosItem::new(curr_jd, graha_pos));
+  }
+  items
+}
+
+/*
+ Get set of tropical geocentric coordinates for groups of celestial bodies
+*/
+pub fn calc_bodies_positions_jd_geo(jd_start: f64, keys: Vec<&str>, days: i32, num_per_day: f64) -> Vec<GrahaPosSet> {
+  let mut items: Vec<GrahaPosSet> = Vec::new();
+  let max_f64 = floor(days as f64 * num_per_day, 0);
+  let max = max_f64 as i32;
+  let increment = 1f64 / num_per_day;
+  for i in 0..max {
+    let curr_jd = jd_start + (i as f64 * increment);
+    let mut bodies: Vec<GrahaPos> = Vec::new();
+    for key in &keys {
+      let graha_pos = calc_body_jd_geo(curr_jd, key);
+      bodies.push(graha_pos);
+    }
+    items.push(GrahaPosSet::new(curr_jd, bodies));
+  }
+  items
+}
+
+/*
  Get sidereal geocentric coordinates with an ayanamsha key
 */
 pub fn calc_body_jd_geo_sidereal(jd: f64, key: &str, aya_key: &str) -> GrahaPos {
@@ -107,11 +144,22 @@ pub fn calc_body_jd_topo_sidereal(jd: f64, key: &str, geo: GeoPos, aya_key: &str
   calc_body_jd(jd, key, false, true)
 }
 
-
+/*
+  Fetch a set of
+*/
 pub fn get_bodies_dual_geo(jd: f64, keys: Vec<&str>) -> Vec<GrahaPos> {
   let mut bodies: Vec<GrahaPos> = Vec::new();
   for key in keys {
     let result = calc_body_dual_jd_geo(jd, key);
+    bodies.push(result);
+  }
+  bodies
+}
+
+pub fn get_bodies_dual_topo(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<GrahaPos> {
+  let mut bodies: Vec<GrahaPos> = Vec::new();
+  for key in keys {
+    let result = calc_body_dual_jd_topo(jd, key, geo);
     bodies.push(result);
   }
   bodies

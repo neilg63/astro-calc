@@ -1,25 +1,6 @@
 use chrono::*;
 use ::serde::{Serialize, Deserialize};
-use super::geo_pos::*;
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct KeyNumValue {
-  key: String,
-  value: f64,
-}
-
-impl KeyNumValue {
-  pub fn new(key: &str, value: f64) -> KeyNumValue {
-    KeyNumValue { key: key.to_string(), value: value }
-  }
-}
-
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct StringValue {
-  key: String,
-  value: String,
-}
+use super::{geo_pos::*, general::*};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Variant {
@@ -311,7 +292,7 @@ pub struct AstroChart {
   #[serde(rename="numValues")]
   num_values: Vec<KeyNumValue>,
   #[serde(rename="stringValues")]
-  string_values: Vec<StringValue>,
+  string_values: Vec<KeyStringValue>,
   objects: Vec<ObjectMatchSet>,
   rashis: Vec<RashiSet>,
   #[serde(rename="progressItems")]
