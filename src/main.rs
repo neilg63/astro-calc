@@ -137,7 +137,7 @@ async fn welcome() -> impl Responder {
 }
 
 async fn welcome_not_configured() -> impl Responder {
-  web::Json( json!({ "message": "Welcome to Astro API", "error": "Incorrect ephemeris path", "time": DateInfo::now() }))
+  web::Json( json!({ "valid": false, "message": "Welcome to Astro API", "error": "Incorrect ephemeris path", "time": DateInfo::now() }))
 }
 
 async fn route_not_found() -> impl Responder {
