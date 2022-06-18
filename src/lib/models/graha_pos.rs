@@ -3,6 +3,24 @@ use super::super::julian_date::*;
 use super::super::traits::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct BodyPos {
+  pub key: String,
+  pub lng: f64,
+  pub lat: f64,
+  #[serde(rename="lngSpeed")]
+  pub lng_speed: f64,
+  #[serde(rename="latSpeed")]
+  pub lat_speed: f64,
+  pub mode: String,
+}
+
+impl BodyPos {
+  pub fn new(key: &str, mode: &str, lng: f64, lat: f64, lng_speed: f64, lat_speed: f64) -> Self {
+    BodyPos { key: key.to_string(), mode: mode.to_string(), lng: lng, lat: lat, lng_speed: lng_speed, lat_speed: lat_speed }
+  }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GrahaPos {
   pub key: String,
   pub lng: f64,
@@ -79,6 +97,18 @@ impl GrahaPos {
    */
   pub fn basic(key: &str, lng: f64) -> Self {
     GrahaPos { key: key.to_string(), lng: lng, lat: 0f64, lng_speed: 0f64, lat_speed: 0f64, rect_ascension: 0f64, declination: 0f64 }
+  }
+
+  pub fn toBody(&self, mode: &str) -> BodyPos {
+    let lng = match mode {
+      "eq" => self.rect_ascension,
+      _ => self.lng
+    };
+    let lat = match mode {
+      "eq" => self.declination,
+      _ => self.lat
+    };
+    BodyPos::new(self.key.as_str(), mode, lng, lat, self.lng_speed, self.lat_speed)
   }
 
 }

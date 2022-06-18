@@ -85,3 +85,26 @@ impl FromKey<Ayanamsha> for Ayanamsha {
     }
   }
 }
+
+pub fn all_ayanamsha_keys() -> Vec<&'static str> {
+  vec![
+    "true_citra",
+    "lahiri",
+    "krishnamurti",
+    "yukteshwar",
+    "raman",
+    "valensmoon",
+    "true_mula",
+    "true_revati",
+    "true_pushya",
+    "true_sheoran",
+    "aldebaran_15_tau",
+    "galcent_mula_wilhelm",
+    "galcent_cochrane",
+    "hipparchos",
+    "sassanian",
+    "ushashashi",
+    "jnbhasin",
+    "tropical",
+  ]
+}

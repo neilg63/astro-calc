@@ -16,97 +16,129 @@ use libswe_sys::swerust::{
     handler_swe02::*, handler_swe03::*, handler_swe08::*, handler_swe14::*,
 };
 use serde::{Serialize, Deserialize};
+use serde_json::*;
 use std::fmt;
-use clap::{Arg, App};
+use clap::{Arg, App as ClapApp};
 use chrono::{ NaiveDateTime };
 use lib::julian_date::*;
 use lib::utils::minmax::*;
 use lib::settings::{ayanamshas::*,graha_values::*};
 use extensions::swe::*;
 use lib::{transposed_transitions::*, transitions::*};
-use lib::core::*;
-use lib::models::geo_pos::*;
+use lib::{core::*, models::{geo_pos::*, graha_pos::*, houses::*}};
+use std::sync::Mutex;
+use actix_web::{get, App, HttpServer, Responder, HttpRequest, web::{self, Data}};
+use std::path::Path;
 
 const SWEPH_PATH_DEFAULT: &str = "/Users/neil/apps/findingyou/findingyou-api/src/astrologic/ephe";
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct KeyNumValue {
-    key: String,
-    value: f64,
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DateInfo {
+    date: String,
+    jd: f64,
+    unix: i64
 }
 
-impl KeyNumValue {
-    pub fn new(key: &str, value: f64) -> KeyNumValue {
-        KeyNumValue { key: key.to_string(), value: value }
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct AppData {
+  path: String,
+}
+
+impl DateInfo {
+    fn new(dateref: &str) -> DateInfo {
+        let dt = iso_string_to_datetime(dateref);
+        DateInfo {
+             date: dt.format("%Y-%m-%dT%H:%M:%S").to_string(),
+             jd: dt.to_jd(),
+             unix: dt.timestamp()
+         }
     }
 
-    pub fn update(&mut self, value: f64) {
-        self.value = value;
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum PreferenceValue {
-    Numeric(f64),
-    String(String),
-    None,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Preference {
-    key: String,
-    value: PreferenceValue,
-}
-
-impl Preference {
-    fn new_f64(key: &str,value: f64) -> Self {
-        Preference{ key: key.to_string(), value: PreferenceValue::Numeric(value) }
-    }
-
-    fn new_string(key: &str, value: &str) -> Self {
-        Preference{ key: key.to_string(), value: PreferenceValue::String(value.to_string()) }
+    fn now() -> DateInfo {
+        let dt = NaiveDateTime::from_timestamp(chrono::offset::Utc::now().timestamp(), 0);
+        DateInfo {
+             date: dt.format("%Y-%m-%dT%H:%M:%S").to_string(),
+             jd: dt.to_jd(),
+             unix: dt.timestamp()
+         }
     }
 }
 
-impl fmt::Display for Preference {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self.value {
-            PreferenceValue::Numeric(val) => write!(f, "{}", val),
-            PreferenceValue::String(val) => write!(f, "{}", val),
-            _ => write!(f, "")
-        }
-    }
+#[get("/jd/{dateref}")]
+async fn date_info(dateref: web::Path<String>) -> impl Responder {
+   let info = DateInfo::new(dateref.to_string().as_str());
+    web::Json(json!(info))
 }
 
-/* pub fn calc_body_jd(jd: f64, key: &str, sideral: bool, topo: bool,
-) -> GrahaPos {
-  let data: any = {};
-  const body = grahaValues.find(b => b.key === key);
-  if (body) {
-    const topoFlag = topoMode ? swisseph.SEFLG_TOPOCTR : 0;
-    const gFlag = sideralMode
-      ? swisseph.SEFLG_SIDEREAL | topoFlag
-      : swisseph.SEFLG_SWIEPH | swisseph.SEFLG_SPEED | topoFlag;
-    await calcUtAsync(jd, body.num, gFlag).catch(result => {
-      if (result instanceof Object) {
-        result.valid = !result.error;
-        processBodyResult(result, body);
-        data = {
-          num: body.num,
-          name: body.subkey,
-          friends: body.friends,
-          ...result,
-        };
-      }
-    });
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct PositionInfo {
+  date: DateInfo,
+  geo: GeoPos,
+  positions: Vec<GrahaPosSet>
+}
+
+impl PositionInfo {
+  fn new(date: DateInfo, geo: GeoPos, positions: Vec<GrahaPosSet>) -> PositionInfo {
+    PositionInfo{ date, geo, positions }
   }
-  return new Graha(data);
-}; */
+}
 
+#[get("/progress/{dateref}/{loc}")]
+async fn bodies_progress(req: HttpRequest) -> impl Responder {
+  let dateref: String = req.match_info().get("dateref").unwrap().parse().unwrap();
+  let loc: String = req.match_info().query("loc").parse().unwrap();
+  let keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ur", "ne", "pl", "ke"];
+  let info = DateInfo::new(dateref.to_string().as_str());
+  let parts: Vec<f64> = loc.split(",").into_iter().map(|p| p.parse::<f64>().unwrap()).collect();
+  let geo = GeoPos::new(parts[0], parts[1], 0f64);
+  let data = calc_bodies_positions_jd_geo(info.jd, keys, 30, 2f64);
+  web::Json(json!(PositionInfo::new(info, geo, data)))
+}
 
-fn main() {
+#[get("/positions/{dateref}/{loc}")]
+async fn body_positions(req: HttpRequest) -> impl Responder {
+  let dateref: String = req.match_info().get("dateref").unwrap().parse().unwrap();
+  let loc: String = req.match_info().query("loc").parse().unwrap();
+  let keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ur", "ne", "pl", "ke"];
+  let info = DateInfo::new(dateref.to_string().as_str());
+  let parts: Vec<f64> = loc.split(",").into_iter().map(|p| p.parse::<f64>().unwrap()).collect();
+  let geo = GeoPos::new(parts[0], parts[1], 0f64);
+  let data = get_bodies_dual_geo(info.jd, keys.clone());
+  let valid = data.len() > 0;
+  let house_data = get_all_house_systems(info.jd, geo);
+  let ayanamshas = get_all_ayanamsha_values(info.jd);
+  let transitions = get_transition_sets(info.jd, keys, geo);
+  web::Json(json!({ "valid": valid, "date": info, "geo": geo, "bodies": data, "house": house_data, "ayanamshas": ayanamshas, "transitions": transitions }))
+}
+
+async fn date_now() -> impl Responder {
+  web::Json(json!(DateInfo::now()))
+}
+
+async fn show_path(req: HttpRequest, ) -> impl Responder {
+  if let Some(app_data) = req.app_data::<AppData>() {
+    web::Json(json!(app_data))
+  } else {
+    web::Json(json!({ "path": "N/A" }))
+  }
+}
+
+async fn welcome() -> impl Responder {
+  web::Json( json!({ "message": "Welcome to Astro API", "time": DateInfo::now() }))
+}
+
+async fn welcome_not_configured() -> impl Responder {
+  web::Json( json!({ "message": "Welcome to Astro API", "error": "Incorrect ephemeris path", "time": DateInfo::now() }))
+}
+
+async fn route_not_found() -> impl Responder {
+  web::Json( json!({ "valid": false, "error": "route not found" }))
+}
+
+#[actix_web::main]
+async fn main()  -> std::io::Result<()> {
   
-    let matches = App::new("AstroApi")
+    let matches = ClapApp::new("AstroApi")
     .version("1.0")
     .author("Neil Gardner <neilgardner1963@gmail.com>")
     .about("Astrological calculations via Swiss Ephemeris")
@@ -118,10 +150,40 @@ fn main() {
       .help("Set the path to the Ephemeris data files")
     )
     .get_matches();
-  
-  let ephemeris_path = matches.value_of("path").unwrap_or(SWEPH_PATH_DEFAULT);
+    let ephemeris_path = matches.value_of("path").unwrap_or(SWEPH_PATH_DEFAULT).to_owned();
+    let has_path = Path::new(&ephemeris_path).exists();
+    if  has_path {
+      set_ephe_path(ephemeris_path.as_str());
+    }
+    
+    let data = Data::new(Mutex::new(AppData{ path: ephemeris_path }));
 
-  set_ephe_path(ephemeris_path);
+    HttpServer::new(move || {
+      if has_path {
+        App::new()
+        .app_data(Data::clone(&data))
+          .route("/", web::get().to(welcome))
+          .route("/ephemeris-path", web::get().to(show_path))
+          .route("/jd", web::get().to(date_now))
+          .service(date_info)
+          .service(bodies_progress)
+          .service(body_positions)
+          .route("/{sec1}", web::get().to(route_not_found))
+          .route("/{sec1}/{sec2}", web::get().to(route_not_found))
+          .route("/{sec1}/{sec2}/{sec3}", web::get().to(route_not_found))
+      } else {
+        App::new()
+        .app_data(Data::clone(&data))
+          .route("/", web::get().to(welcome_not_configured))
+      }
+  })
+  .bind(("127.0.0.1", 8087))?
+  .run()
+  .await
+}
+
+fn dev_test() {
+  
   let julian_day_ut = julday(1991, 10, 13, 20.0, Calandar::Gregorian);
   println!("13/10/1991 at 20:00 is {}", julian_day_ut);
 
@@ -170,28 +232,6 @@ fn main() {
   let min_val: f64 = min_f64(houses.clone());
   println!("min lng : {}, max: {}, {:?}", min_val, max_f64(houses.clone()), houses);
 
-  let ayas = vec![KeyNumValue::new("true_citra", 23.9044764), KeyNumValue::new("lahiri", 24.1054767)];
-
-  let mut aya_val = 0f64;
-
-  if let Some(row) = ayas.iter().find(|a| a.key == "lahiri".to_string()) {
-      aya_val = row.value;
-  }
-
-  println!("lahari: {}", aya_val);
-
-  let fav_food = Preference::new_string("favourite_food", "Pizza");
-
-  let weight = Preference::new_f64("weight", 74.232938);
-
-  println!("fav food: {}, weight: {}", fav_food, weight);
-
-  let str1 = "Cabbage_Soup_Price";
-
-  let str2 = str1.to_lowercase().replace("_", "").replace(" ", "");
-
-  println!("{}", str2);
-
 
   let dt = NaiveDateTime::from_timestamp(31_250_000 * 50, 0);
 
@@ -211,10 +251,6 @@ fn main() {
     let dt = iso_string_to_datetime(dt_string);
     println!("{}: {} / {}", dt_string, dt.timestamp() / 1_000_000, dt.to_jd() );
   }
-
-  let mut kv = KeyNumValue::new("frequency", 20_000f64);
-  kv.update(19_000f64);
-  println!("{:?}", kv);
 
 
   let tc = Ayanamsha::TrueCitra;

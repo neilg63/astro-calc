@@ -1,7 +1,6 @@
 use std::os::raw::{c_char, c_double, c_int};
 use serde::{Serialize, Deserialize};
 use libswe_sys::sweconst::{Bodies};
-use libswe_sys::swerust::{handler_swe14::*};
 use super::super::lib::settings::ayanamshas::*;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -167,63 +166,3 @@ pub fn set_sid_mode(iflag: i32) {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AscMc {
-  ascendant: f64,
-  mc: f64,
-  armc: f64,
-  vertex: f64,
-  equasc: f64,		// "equatorial ascendant" *
-  coasc1: f64,		// "co-ascendant" (W. Koch) *
-  coasc2: f64,		// "co-ascendant" (M. Munkasey) *
-  polasc: f64,
-}
-
-impl AscMc {
-  pub fn new(points: [f64; 10]) -> AscMc {
-      AscMc {
-        ascendant: points[0],
-        mc: points[1],
-        armc: points[2],
-        vertex: points[3],
-        equasc: points[4],
-        coasc1: points[5],
-        coasc2: points[6],
-        polasc: points[7],
-      }
-  }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct HouseData {
-  pub jd: f64,
-  pub lat: f64,
-  pub lng: f64,
-  pub system: char,
-  pub houses: Vec<f64>,
-  pub points: AscMc,
-}
-
-impl HouseData {
-
-  pub fn new(jd: f64, lat: f64, lng: f64, system: char) -> HouseData {
-    let hd = houses(jd, lat, lng, system);
-      HouseData {
-        jd: jd,
-        lng: lng,
-        lat: lat,
-        system: system,
-        houses: hd.cusps,
-        points: AscMc::new(hd.ascmc)
-    }
-  }
-}
-
-pub fn get_house_data(jd: f64, lat: f64, lng: f64, system: char) -> HouseData {
-  HouseData::new(jd, lat, lng, system)
-}
-
-pub fn get_ascendant(jd: f64, lat: f64, lng: f64) -> f64 {
-  let hd = houses(jd, lat, lng, 'W');
-  hd.ascmc[0]
-}

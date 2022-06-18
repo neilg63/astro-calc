@@ -65,7 +65,7 @@ impl TransitionGroup for ExtendedTransitionSet {
       KeyNumValue::new("mc", self.mc),
       KeyNumValue::new("set", self.set),
       KeyNumValue::new("ic", self.ic),
-      KeyNumValue::new("next_rise", self.rise),
+      KeyNumValue::new("next_rise", self.next_rise),
     ]
   }
 }
@@ -99,31 +99,30 @@ pub fn calc_transition_set_extended(jd: f64, ipl: Bodies, lat: f64, lng: f64) ->
   let prev_set = next_set(ref_jd - 1f64, ipl, lat, lng);
   let rise = next_rise(ref_jd, ipl, lat, lng);
   let set = next_set(ref_jd, ipl, lat, lng);
-  let next_rise = next_rise(ref_jd + 1f64, ipl, lat, lng);
 
   //let mc = next_mc_q(ref_jd, ipl, lat, lng, rise);
-  let mc = next_mc(ref_jd, ipl, lat, lng);
+  let mc = next_mc(rise, ipl, lat, lng);
   //let mc = 0f64;
   //let ic = 0f64;
   //let ic = next_ic_q(ref_jd, ipl, lat, lng, set);
-  let ic = next_ic(ref_jd, ipl, lat, lng);
+  let ic = next_ic(rise, ipl, lat, lng);
+  let next_rise = next_rise(set, ipl, lat, lng);
   ExtendedTransitionSet { 
-    prev_set: prev_set,
-    rise: rise,
-    mc: mc,
-    set: set,
-    ic: ic,
-    next_rise: next_rise
+    prev_set,
+    rise,
+    mc,
+    set,
+    ic,
+    next_rise
   }
 }
 
 pub fn calc_transition_set(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> TransitionSet {
   let ref_jd = start_jd_geo(jd, lng);
-  let prev_set = next_set(ref_jd - 1f64, ipl, lat, lng);
   let rise = next_rise(ref_jd, ipl, lat, lng);
-  let set = next_set(ref_jd, ipl, lat, lng);
-  let mc = next_mc(ref_jd, ipl, lat, lng);
-  let ic = next_ic(ref_jd, ipl, lat, lng);
+  let set = next_set(rise, ipl, lat, lng);
+  let mc = next_mc(rise, ipl, lat, lng);
+  let ic = next_ic(rise, ipl, lat, lng);
   TransitionSet { 
     rise: rise,
     mc: mc,

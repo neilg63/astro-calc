@@ -3,8 +3,8 @@ use libswe_sys::sweconst::{Bodies, OptionalFlag};
 use libswe_sys::swerust::{handler_swe03::*};
 use super::settings::{ayanamshas::*};
 use super::traits::*;
-use super::models::{graha_pos::*, geo_pos::*};
-use super::super::extensions::swe::{azalt, set_topo, set_sid_mode};
+use super::models::{graha_pos::*, geo_pos::*, general::*};
+use super::super::extensions::swe::{azalt, set_topo, set_sid_mode, get_ayanamsha};
 
 
 pub fn calc_body_jd(jd: f64, sample_key: &str, sidereal: bool, topo: bool) -> GrahaPos {
@@ -170,4 +170,28 @@ pub fn get_bodies_dual_topo(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<GrahaP
 */
 pub fn calc_altitude(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f64, lng: f64, lat: f64) -> f64 {
   azalt(tjd_ut, is_equal, geo_lat, geo_lng, lng, lat).value
+}
+
+pub fn get_ayanamsha_value(jd: f64, key: &str) -> f64 {
+  let aya_flag = Ayanamsha::from_key(key);
+  get_ayanamsha(jd, aya_flag)
+}
+
+pub fn get_ayanamsha_values(jd: f64, keys: Vec<&str>) -> Vec<KeyNumValue> {
+  let mut items: Vec<KeyNumValue> = Vec::new();
+  for key in keys {
+    let value = get_ayanamsha(jd, Ayanamsha::from_key(key));
+    items.push(KeyNumValue::new(key, value));
+  }
+  items
+}
+
+pub fn get_all_ayanamsha_values(jd: f64) -> Vec<KeyNumValue> {
+  let mut items: Vec<KeyNumValue> = Vec::new();
+  let keys = all_ayanamsha_keys();
+  for key in keys {
+    let value = get_ayanamsha(jd, Ayanamsha::from_key(key));
+    items.push(KeyNumValue::new(key, value));
+  }
+  items
 }
