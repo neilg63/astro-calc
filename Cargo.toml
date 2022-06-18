@@ -21,4 +21,4 @@ num-traits = "0.2"
 rustc-serialize = "*"
 chrono = { version = "0.4", features = ["serde"] }
 ordered-float = { version = "3.0", default-features = false }
-clap = "3.1.18"
+clap = { version = "3.2.5", features = ["derive"] }

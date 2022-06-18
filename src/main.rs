@@ -6,7 +6,6 @@ extern crate serde_json;
 extern crate libswe_sys;  
 extern crate ordered_float;
 extern crate chrono;
-extern crate clap;
 
 //use libswe_sys::sweconst::{Bodies, Calandar, HouseSystem};
 use libswe_sys::sweconst::{
@@ -17,13 +16,9 @@ use libswe_sys::swerust::{
 };
 use serde::{Serialize, Deserialize};
 use serde_json::*;
-use std::fmt;
-use clap::{Arg, App as ClapApp};
+use clap::Parser;
 use chrono::{ NaiveDateTime };
 use lib::julian_date::*;
-use lib::utils::minmax::*;
-use lib::settings::{ayanamshas::*,graha_values::*};
-use extensions::swe::*;
 use lib::{transposed_transitions::*, transitions::*};
 use lib::{core::*, models::{geo_pos::*, graha_pos::*, houses::*}};
 use std::sync::Mutex;
@@ -31,6 +26,20 @@ use actix_web::{get, App, HttpServer, Responder, HttpRequest, web::{self, Data}}
 use std::path::Path;
 
 const SWEPH_PATH_DEFAULT: &str = "/Users/neil/apps/findingyou/findingyou-api/src/astrologic/ephe";
+const DEFAULT_PORT: u32 = 8087;
+/// Astrologic engine config
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    // Ephemeris path
+    #[clap(short, long, value_parser, default_value_t = SWEPH_PATH_DEFAULT.to_string() )]
+    ephemeris: String,
+
+    #[clap(short, long, value_parser, default_value_t = DEFAULT_PORT )]
+    port: u32,
+}
+
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DateInfo {
@@ -138,19 +147,9 @@ async fn route_not_found() -> impl Responder {
 #[actix_web::main]
 async fn main()  -> std::io::Result<()> {
   
-    let matches = ClapApp::new("AstroApi")
-    .version("1.0")
-    .author("Neil Gardner <neilgardner1963@gmail.com>")
-    .about("Astrological calculations via Swiss Ephemeris")
-    .arg(
-      Arg::new("path")
-      .short('p')
-      .long("path")
-      .value_name("path")
-      .help("Set the path to the Ephemeris data files")
-    )
-    .get_matches();
-    let ephemeris_path = matches.value_of("path").unwrap_or(SWEPH_PATH_DEFAULT).to_owned();
+    let args = Args::parse();
+    let ephemeris_path = args.ephemeris;
+    let port = args.port as u32;
     let has_path = Path::new(&ephemeris_path).exists();
     if  has_path {
       set_ephe_path(ephemeris_path.as_str());
@@ -175,13 +174,16 @@ async fn main()  -> std::io::Result<()> {
         App::new()
         .app_data(Data::clone(&data))
           .route("/", web::get().to(welcome_not_configured))
+          .route("/{sec1}", web::get().to(welcome_not_configured))
+          .route("/{sec1}/{sec2}", web::get().to(welcome_not_configured))
+          .route("/{sec1}/{sec2}/{sec3}", web::get().to(welcome_not_configured))
       }
   })
   .bind(("127.0.0.1", 8087))?
   .run()
   .await
 }
-
+/* 
 fn dev_test() {
   
   let julian_day_ut = julday(1991, 10, 13, 20.0, Calandar::Gregorian);
@@ -310,4 +312,4 @@ fn dev_test() {
   let past_jd = datetime_to_julian_day("1972-03-21");
   let transposed_positions = calc_transposed_graha_transitions_from_source_refs_geo(julian_day_ut, geo, past_jd, vec!["su", "mo", "me", "ve", "ma", "ju", "sa"]);
   println!("body positions at {}: {:?}", past_jd, transposed_positions);
-}
+} */
