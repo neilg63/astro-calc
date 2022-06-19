@@ -140,12 +140,13 @@ pub fn azalt(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f64, lng: f64, 
 pub fn get_ayanamsha(tjd_ut: f64, mode: Ayanamsha) -> f64 {
   let mut daya: [f64; 1] = [0.0; 1];
   let mut serr = [0; 255];
+  set_sid_mode(mode as i32);
   let result = unsafe {
       let p_daya = daya.as_mut_ptr();
       let p_serr = serr.as_mut_ptr();
       let status = swe_get_ayanamsa_ex_ut(
           tjd_ut,
-          mode as i32,
+          2i32,
           p_daya,
           p_serr
       );

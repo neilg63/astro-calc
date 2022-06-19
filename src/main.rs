@@ -21,6 +21,7 @@ use chrono::{ NaiveDateTime };
 use lib::julian_date::*;
 use lib::{transposed_transitions::*, transitions::*};
 use lib::{core::*, models::{geo_pos::*, graha_pos::*, houses::*}};
+use extensions::swe::{set_sid_mode};
 use std::sync::Mutex;
 use actix_web::{get, App, HttpServer, Responder, HttpRequest, web::{self, Data}};
 use std::path::Path;
@@ -116,6 +117,7 @@ async fn body_positions(req: HttpRequest) -> impl Responder {
   let valid = data.len() > 0;
   let house_data = get_all_house_systems(info.jd, geo);
   let ayanamshas = get_all_ayanamsha_values(info.jd);
+  //let ayanamshas = get_ayanamsha_value(info.jd, "true_citra");
   let transitions = get_transition_sets(info.jd, keys, geo);
   web::Json(json!({ "valid": valid, "date": info, "geo": geo, "bodies": data, "house": house_data, "ayanamshas": ayanamshas, "transitions": transitions }))
 }
@@ -153,6 +155,7 @@ async fn main()  -> std::io::Result<()> {
     let has_path = Path::new(&ephemeris_path).exists();
     if  has_path {
       set_ephe_path(ephemeris_path.as_str());
+      set_sid_mode(0);
     }
     
     let data = Data::new(Mutex::new(AppData{ path: ephemeris_path }));
