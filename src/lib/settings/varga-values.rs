@@ -1,10 +1,10 @@
 
 pub struct VargaItem {
-  num: u8,
-  parashari: bool,
-  parivritti: bool,
-  tajik: bool,
-  nadi: bool,
+  pub num: u8,
+  pub parashari: bool,
+  pub parivritti: bool,
+  pub tajik: bool,
+  pub nadi: bool,
 }
 
 impl VargaItem {
@@ -13,7 +13,7 @@ impl VargaItem {
   }
 }
 
-const VARGA_VALUES: Vec<VargaItem> = vec![
+pub const VARGA_VALUES: Vec<VargaItem> = vec![
   VargaItem::new(1, false, true, true, true),
   VargaItem::new(2, false, true, true, true),
   VargaItem::new(3, false, true, true, true),

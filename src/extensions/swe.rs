@@ -17,17 +17,6 @@ enum BodyAltitudes {
 
 #[link(name = "swe")]
 extern "C" {
-  /*
-  jd: number;
-planetNum: number;
-iflag: number;
-transType: number;
-longitude: number;
-latitude: number;
-altitude: number;
-pressure: number;
-temperature: number;
-  */
   
   pub fn swe_rise_trans(
       tjd_ut: c_double,

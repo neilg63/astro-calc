@@ -14,35 +14,37 @@ pub fn match_house_num(lng: f64, houses: Vec<f64>) -> i32 {
   matchedIndex + 1
 };
 
-pub fn map_sign_to_house = (sign: f64, houses: Vec<f64>) -> f64 {
+pub fn map_sign_to_house(sign: f64, houses: Vec<f64>) -> f64 {
   let num_houses = houses.len();
   let mut hn = 0;
   if (num_houses > 0) {
     let diff = houses[0] / 30f64;
     let hnr = (sign - diff) % num_houses as f64;
-    hn = if hnr < 1  { hnr + numH } else { hnr };
+    hn = if hnr < 1  { hnr + num_houses } else { hnr };
   }
   return hn;
 };
 
-pub fn limitValueToRange = (num = 0, min = 0, max = 360) -> f64 {
+pub fn limit_value_to_range(num: f64, min: f64, max: f64) -> f64 {
   let span = max - min;
   let val = (num - min) % span;
-  let refVal = val > 0 ? val : span + val;
-  let outVal = refVal + min;
-  return (min < 0 && (val < 0 || num > max))? 0 - outVal: outVal;
+  let ref_val = val > 0 ? val : span + val;
+  let out_val = ref_val + min;
+  if (min < 0 && (val < 0 || num > max)) { 0 - out_val } else { out_val };
 }
 
-pub fn calc_varga_value = (lng: f64, num = 1) => (lng * num) % 360;
+pub fn calc_varga_value(lng: f64, num = 1) -> f64 {
+  (lng * num as f64) % 360f64
+}
 
 pub fn subtract_360(lng: f64, offset = 0) -> f64 {
   (lng + 360 as f64 - offset as f64) % 360f64
 }
 
 pub fn calc_all_vargas(lng: f64) -> {
-  return vargaValues.map(v => {
+  return VARGA_VALUES.map(|v| {
     let value = calc_varga_value(lng, v.num);
-    return { num: v.num, key: v.key, value };
+    return { num: v.num, value };
   });
 }
 
@@ -89,33 +91,6 @@ pub fn mid_point_to_surface(coord1: GeoPos, coord2: GeoPos) -> GeoPos {
   let mid_alt = (c1.alt + c2.alt) / 2f64;
   GeoPos::new( to_degrees(mid_lat), lng: to_degrees(mid_lng), mid_alt)
 }
-
-/* 
-pub fn approxTransitTimes = (geo: GeoPos, alt: f64, jd: f64, ra: f64, decl: f64): TransitJdSet => {
-  let deltaT = getDeltaT(jd);
-  let nut = nutation(jd + deltaT)[0];
-  let sidTime = getSidTime(jd, 0, nut);
-  let h0 = toRadians(alt);
-  const α = toRadians(ra);
-  const δ = toRadians(decl);
-  //let th0 = sidereal.apparent0UT(jd);
-  let th0 = sidTime;
-  //let th1 = sidereal.apparent0UT(jd - 0.5);
-  let th1 = getSidTime(jd - 0.5, 0, nut);
-  let transData = rise.approxTimes({lat: toRadians(geo.lat), lon: toRadians(geo.lng)}, h0, th0, α, δ, th1);
-  let result = { rise: 0, set: 0, mc: 0, ic: 0 };
-  if (transData instanceof Object) {
-    let keys = Object.keys(transData);
-    if (keys.includes("rise") && keys.includes("set")) {
-      result.rise = secsToExactJd(jd, transData.rise, geo.lng);
-      result.set = secsToExactJd(jd, transData.set, geo.lng);
-      result.mc = secsToExactJd(jd, transData.mc, geo.lng),
-      result.ic = secsToExactJd(jd, transData.ic, geo.lng);
-    }
-  }
-  return result;
-}
- */
 
 pub fn to_360(lng: f64) -> f64 {
   if lng >= 0f64 { lng + 180f64 }  else { 180f64 - lng };
