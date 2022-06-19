@@ -17,10 +17,8 @@ use libswe_sys::swerust::{
 use serde::{Serialize, Deserialize};
 use serde_json::*;
 use clap::Parser;
-use chrono::{ NaiveDateTime };
-use lib::julian_date::*;
 use lib::{transposed_transitions::*, transitions::*};
-use lib::{core::*, models::{geo_pos::*, graha_pos::*, houses::*}};
+use lib::{core::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*}, utils::{validators::*}};
 use extensions::swe::{set_sid_mode};
 use std::sync::Mutex;
 use actix_web::{get, App, HttpServer, Responder, HttpRequest, web::{self, Data}};
@@ -41,43 +39,26 @@ struct Args {
 }
 
 
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct DateInfo {
-    date: String,
-    jd: f64,
-    unix: i64
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct AppData {
   path: String,
 }
 
-impl DateInfo {
-    fn new(dateref: &str) -> DateInfo {
-        let dt = iso_string_to_datetime(dateref);
-        DateInfo {
-             date: dt.format("%Y-%m-%dT%H:%M:%S").to_string(),
-             jd: dt.to_jd(),
-             unix: dt.timestamp()
-         }
-    }
-
-    fn now() -> DateInfo {
-        let dt = NaiveDateTime::from_timestamp(chrono::offset::Utc::now().timestamp(), 0);
-        DateInfo {
-             date: dt.format("%Y-%m-%dT%H:%M:%S").to_string(),
-             jd: dt.to_jd(),
-             unix: dt.timestamp()
-         }
-    }
+fn loc_string_to_geo(loc: &str) -> Option<GeoPos> {
+  let parts: Vec<f64> = loc.split(",").into_iter().map(|p| p.parse::<f64>()).filter(|p| match p { Ok(n) => true, _ => false } ).map(|p| p.unwrap()).collect();
+  if parts.len() >= 2 {
+    let alt = if parts.len() > 2 { parts[2] } else { 0f64 };
+    Some(GeoPos::new(parts[0], parts[1], alt))
+  } else {
+    None
+  }
 }
 
 #[get("/jd/{dateref}")]
 async fn date_info(dateref: web::Path<String>) -> impl Responder {
-   let info = DateInfo::new(dateref.to_string().as_str());
-    web::Json(json!(info))
+  let date_str = dateref.as_str();
+  let info = if is_decimal_str(date_str) { DateInfo::new_from_jd(date_str.parse::<f64>().unwrap()) } else { DateInfo::new(date_str) };
+  web::Json(json!(info))
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -109,10 +90,11 @@ async fn bodies_progress(req: HttpRequest) -> impl Responder {
 async fn body_positions(req: HttpRequest) -> impl Responder {
   let dateref: String = req.match_info().get("dateref").unwrap().parse().unwrap();
   let loc: String = req.match_info().query("loc").parse().unwrap();
+  /* let parts: Vec<f64> = loc.split(",").into_iter().map(|p| p.parse::<f64>().unwrap()).collect();
+  let geo = GeoPos::new(parts[0], parts[1], 0f64); */
+  let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
   let keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ur", "ne", "pl", "ke"];
   let info = DateInfo::new(dateref.to_string().as_str());
-  let parts: Vec<f64> = loc.split(",").into_iter().map(|p| p.parse::<f64>().unwrap()).collect();
-  let geo = GeoPos::new(parts[0], parts[1], 0f64);
   let data = get_bodies_dual_geo(info.jd, keys.clone());
   let valid = data.len() > 0;
   let house_data = get_all_house_systems(info.jd, geo);
@@ -120,6 +102,22 @@ async fn body_positions(req: HttpRequest) -> impl Responder {
   //let ayanamshas = get_ayanamsha_value(info.jd, "true_citra");
   let transitions = get_transition_sets(info.jd, keys, geo);
   web::Json(json!({ "valid": valid, "date": info, "geo": geo, "bodies": data, "house": house_data, "ayanamshas": ayanamshas, "transitions": transitions }))
+}
+
+#[get("/transposed-transitions/{current_date}/{current_loc}/{historic_date}/{historic_loc}")]
+async fn body_transposed_transitions(req: HttpRequest) -> impl Responder {
+  let dateref: String = req.match_info().get("historic_date").unwrap().parse().unwrap();
+  let loc: String = req.match_info().query("historic_loc").parse().unwrap();
+  let historic_geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
+  let current_loc: String = req.match_info().query("current_loc").parse().unwrap();
+  let current_geo = if let Some(geo_pos) = loc_string_to_geo(current_loc.as_str()) { geo_pos } else { GeoPos::zero() };
+  let dateref_current: String = req.match_info().get("current_date").unwrap().parse().unwrap();
+  let keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ke"];
+  let historic_dt = DateInfo::new(dateref.to_string().as_str());
+  let current_dt = DateInfo::new(dateref_current.to_string().as_str());
+  let transitions = calc_transposed_graha_transitions_from_source_refs_geo(current_dt.jd, current_geo, historic_dt.jd, historic_geo, keys);
+  let valid = transitions.len() > 0;
+  web::Json(json!({ "valid": valid, "date": current_dt, "geo": current_geo, "historicDate": historic_dt, "historicGeo": historic_geo, "transitions": transitions }))
 }
 
 async fn date_now() -> impl Responder {
@@ -170,6 +168,7 @@ async fn main()  -> std::io::Result<()> {
           .service(date_info)
           .service(bodies_progress)
           .service(body_positions)
+          .service(body_transposed_transitions)
           .route("/{sec1}", web::get().to(route_not_found))
           .route("/{sec1}/{sec2}", web::get().to(route_not_found))
           .route("/{sec1}/{sec2}/{sec3}", web::get().to(route_not_found))

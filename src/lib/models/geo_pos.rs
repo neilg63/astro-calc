@@ -26,4 +26,15 @@ impl GeoPos {
     }
   }
 
+  /*
+  * 0º N, 0ºS as default and GeoPos is required
+  */
+  pub fn zero() -> Self {
+    return GeoPos {
+      lat: 0f64,
+      lng: 0f64,
+      alt: default_altitude
+    }
+  }
+
 }

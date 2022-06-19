@@ -260,10 +260,13 @@ pub fn calc_transposed_graha_transitions_from_source_positions(jd_start: f64, ge
 /*
   Calculate transposed transitions from a set of real body positions with a different time and place
 */
-pub fn calc_transposed_graha_transitions_from_source_refs_topo(jd_start: f64, geo: GeoPos, jd_historic: f64, geo_historic: GeoPos, keys: Vec<&str>) -> Vec<KeyNumValueSet> {
+pub fn calc_transposed_graha_transitions_from_source_refs(mode: &str, jd_start: f64, geo: GeoPos, jd_historic: f64, geo_historic: GeoPos, keys: Vec<&str>) -> Vec<KeyNumValueSet> {
   let mut key_num_sets: Vec<KeyNumValueSet> = Vec::new();
   for key in keys {
-    let graha_pos = calc_body_jd_topo(jd_historic, key, geo_historic);
+    let graha_pos = match mode {
+      "topo" => calc_body_jd_topo(jd_historic, key, geo_historic),
+      _ => calc_body_jd_geo(jd_historic, key)
+    };
     let tr_samples: Vec<AltitudeSample> = calc_transposed_object_transitions(
       jd_start,
       geo,
@@ -280,25 +283,13 @@ pub fn calc_transposed_graha_transitions_from_source_refs_topo(jd_start: f64, ge
   key_num_sets
 }
 
+pub fn calc_transposed_graha_transitions_from_source_refs_topo(jd_start: f64, geo: GeoPos, jd_historic: f64, geo_historic: GeoPos, keys: Vec<&str>) -> Vec<KeyNumValueSet> {
+  calc_transposed_graha_transitions_from_source_refs("topo", jd_start, geo, jd_historic, geo_historic, keys)
+}
+
 /*
   Calculate transposed transitions from a set of real body positions with a different time with geocentric positions
 */
-pub fn calc_transposed_graha_transitions_from_source_refs_geo(jd_start: f64, geo: GeoPos, jd_historic: f64, keys: Vec<&str>) -> Vec<KeyNumValueSet> {
-  let mut key_num_sets: Vec<KeyNumValueSet> = Vec::new();
-  for key in keys {
-    let graha_pos = calc_body_jd_geo(jd_historic, key);
-    let tr_samples: Vec<AltitudeSample> = calc_transposed_object_transitions(
-      jd_start,
-      geo,
-      graha_pos.lng,
-      graha_pos.lat,
-      graha_pos.lng_speed,
-      5,
-      TransitionFilter::All,
-      graha_pos.key.as_str(),
-    );
-    let tr_key_set: KeyNumValueSet = KeyNumValueSet::new(graha_pos.key.as_str(), tr_samples.iter().map(|tr| tr.to_key_num()).collect());
-    key_num_sets.push(tr_key_set);
-  }
-  key_num_sets
+pub fn calc_transposed_graha_transitions_from_source_refs_geo(jd_start: f64, geo: GeoPos, jd_historic: f64, geo_historic: GeoPos, keys: Vec<&str>) -> Vec<KeyNumValueSet> {
+  calc_transposed_graha_transitions_from_source_refs("geo", jd_start, geo, jd_historic, geo_historic, keys)
 }
