@@ -7,24 +7,25 @@ extern crate libswe_sys;
 extern crate ordered_float;
 extern crate chrono;
 
-//use libswe_sys::sweconst::{Bodies, Calandar, HouseSystem};
+/* //use libswe_sys::sweconst::{Bodies, Calandar, HouseSystem};
 use libswe_sys::sweconst::{
     Bodies, Calandar, OptionalFlag,
-};
+}; */
 use libswe_sys::swerust::{
-    handler_swe02::*, handler_swe03::*, handler_swe08::*, handler_swe14::*,
+    handler_swe02::*,
 };
 use serde::{Serialize, Deserialize};
 use serde_json::*;
 use clap::Parser;
 use lib::{transposed_transitions::*, transitions::*};
-use lib::{core::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*}, utils::{validators::*}};
+use lib::{core::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*, general::*}, utils::{validators::*}};
 use extensions::swe::{set_sid_mode};
 use std::sync::Mutex;
 use actix_web::{get, App, HttpServer, Responder, HttpRequest, web::{self, Data}};
 use std::path::Path;
+use std::collections::{HashMap};
 
-const SWEPH_PATH_DEFAULT: &str = "/Users/neil/apps/findingyou/findingyou-api/src/astrologic/ephe";
+const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
 const DEFAULT_PORT: u32 = 8087;
 /// Astrologic engine config
 #[derive(Parser, Debug)]
@@ -90,8 +91,33 @@ async fn bodies_progress(req: HttpRequest) -> impl Responder {
 async fn body_positions(req: HttpRequest) -> impl Responder {
   let dateref: String = req.match_info().get("dateref").unwrap().parse().unwrap();
   let loc: String = req.match_info().query("loc").parse().unwrap();
-  /* let parts: Vec<f64> = loc.split(",").into_iter().map(|p| p.parse::<f64>().unwrap()).collect();
-  let geo = GeoPos::new(parts[0], parts[1], 0f64); */
+  let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
+  let info = DateInfo::new(dateref.to_string().as_str());
+  let longitudes = get_body_longitudes_geo(info.jd, geo);
+  let valid = longitudes.len() > 0;
+  let ayanamsha = get_ayanamsha_value(info.jd, "true_citra");
+  let sun_transitions = calc_transition_sun(info.jd, geo);
+  web::Json(json!({ "valid": valid, "date": info, "geo": geo, "longitudes": longitudes, "true_citra": ayanamsha, "sunTransitions": sun_transitions }))
+}
+
+#[get("/sun-transitions/{dateref}/{loc}/{num_days}")]
+async fn list_sun_transitions(req: HttpRequest) -> impl Responder {
+  let dateref: String = req.match_info().get("dateref").unwrap().parse().unwrap();
+  let loc: String = req.match_info().query("loc").parse().unwrap();
+  let days_ref: String = req.match_info().query("num_days").parse().unwrap();
+  let days = if is_integer_str(days_ref.as_str()) { days_ref.parse::<i32>().unwrap() } else { 31i32 };
+  let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
+  let info = DateInfo::new(dateref.to_string().as_str());
+  
+  let sun_transitions = calc_transitions_sun(info.jd, days, geo);
+  let valid = sun_transitions.len() > 0;
+  web::Json(json!({ "valid": valid, "date": info, "geo": geo, "sunTransitions": sun_transitions }))
+}
+
+#[get("/chart-data/{dateref}/{loc}")]
+async fn chart_data(req: HttpRequest) -> impl Responder {
+  let dateref: String = req.match_info().get("dateref").unwrap().parse().unwrap();
+  let loc: String = req.match_info().query("loc").parse().unwrap();
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
   let keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ur", "ne", "pl", "ke"];
   let info = DateInfo::new(dateref.to_string().as_str());
@@ -132,8 +158,17 @@ async fn show_path(req: HttpRequest, ) -> impl Responder {
   }
 }
 
+fn key_num_values_to_map(items: Vec<KeyNumValue>) -> HashMap<String, f64> {
+  let mut mp: HashMap<String, f64> = HashMap::new();
+  for item in items {
+    mp.insert(item.key, item.value);
+  }
+  mp
+}
+
 async fn welcome() -> impl Responder {
-  web::Json( json!({ "message": "Welcome to Astro API", "time": DateInfo::now() }))
+  let num_items = vec![KeyNumValue::new("age", 98.8), KeyNumValue::new("height", 177.2)];
+  web::Json( json!({ "message": "Welcome to Astro API", "time": DateInfo::now(), "extra": key_num_values_to_map(num_items) }))
 }
 
 async fn welcome_not_configured() -> impl Responder {
@@ -168,6 +203,8 @@ async fn main()  -> std::io::Result<()> {
           .service(date_info)
           .service(bodies_progress)
           .service(body_positions)
+          .service(chart_data)
+          .service(list_sun_transitions)
           .service(body_transposed_transitions)
           .route("/{sec1}", web::get().to(route_not_found))
           .route("/{sec1}/{sec2}", web::get().to(route_not_found))

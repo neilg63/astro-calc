@@ -87,6 +87,10 @@ pub fn get_ascendant(jd: f64, lat: f64, lng: f64) -> f64 {
   hd.ascmc[0]
 }
 
+pub fn calc_ascendant(jd: f64, geo: GeoPos) -> f64 {
+  get_ascendant(jd, geo.lat, geo.lng)
+}
+
 pub fn get_house_data(jd: f64, lat: f64, lng: f64, system: char) -> HouseData {
   HouseData::new(jd, lat, lng, system)
 }

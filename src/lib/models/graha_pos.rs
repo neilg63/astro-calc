@@ -99,7 +99,7 @@ impl GrahaPos {
     GrahaPos { key: key.to_string(), lng: lng, lat: 0f64, lng_speed: 0f64, lat_speed: 0f64, rect_ascension: 0f64, declination: 0f64 }
   }
 
-  pub fn toBody(&self, mode: &str) -> BodyPos {
+  pub fn to_body(&self, mode: &str) -> BodyPos {
     let lng = match mode {
       "eq" => self.rect_ascension,
       _ => self.lng

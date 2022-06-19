@@ -43,7 +43,7 @@ pub trait TransitionGroup {
 }
 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ExtendedTransitionSet {
   pub prev_set: f64,
   pub rise: f64,
@@ -70,7 +70,7 @@ impl TransitionGroup for ExtendedTransitionSet {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TransitionSet {
   pub rise: f64,
   pub mc: f64,
@@ -129,6 +129,30 @@ pub fn calc_transition_set(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> Transiti
     set: set,
     ic: ic,
   }
+}
+
+pub fn calc_transition_sun(jd: f64, geo: GeoPos) -> ExtendedTransitionSet {
+  calc_transition_set_extended(jd, Bodies::Sun, geo.lat, geo.lng)
+}
+
+pub fn calc_transitions_sun(jd: f64, days: i32, geo: GeoPos) -> Vec<KeyNumValue> {
+  let mut sets: Vec<KeyNumValue> = Vec::new();
+  for i in 0..days {
+    let ref_jd = jd + i as f64;
+    let items = calc_transition_set(ref_jd, Bodies::Sun, geo.lat, geo.lng).to_key_nums();
+    for item in items {
+      sets.push(item);
+    }
+  }
+  sets
+}
+
+pub fn calc_transition_moon(jd: f64, geo: GeoPos) -> ExtendedTransitionSet {
+  calc_transition_set_extended(jd, Bodies::Moon, geo.lat, geo.lng)
+}
+
+pub fn calc_transition_body(jd: f64, ipl: Bodies, geo: GeoPos) -> TransitionSet {
+  calc_transition_set(jd, ipl, geo.lat, geo.lng)
 }
 
 pub fn next_rise(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {

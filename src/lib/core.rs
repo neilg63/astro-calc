@@ -3,9 +3,9 @@ use libswe_sys::sweconst::{Bodies, OptionalFlag};
 use libswe_sys::swerust::{handler_swe03::*};
 use super::settings::{ayanamshas::*};
 use super::traits::*;
-use super::models::{graha_pos::*, geo_pos::*, general::*};
+use super::models::{graha_pos::*, geo_pos::*, general::*, houses::{calc_ascendant}};
 use super::super::extensions::swe::{azalt, set_topo, set_sid_mode, get_ayanamsha};
-
+use std::collections::{HashMap};
 
 pub fn calc_body_jd(jd: f64, sample_key: &str, sidereal: bool, topo: bool) -> GrahaPos {
   let combo: i32;
@@ -154,6 +154,47 @@ pub fn get_bodies_dual_geo(jd: f64, keys: Vec<&str>) -> Vec<GrahaPos> {
     bodies.push(result);
   }
   bodies
+}
+
+pub fn get_bodies_ecl_geo(jd: f64, keys: Vec<&str>) -> Vec<GrahaPos> {
+  let mut bodies: Vec<GrahaPos> = Vec::new();
+  for key in keys {
+    let result = calc_body_jd_geo(jd, key);
+    bodies.push(result);
+  }
+  bodies
+}
+
+pub fn get_bodies_ecl_topo(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<GrahaPos> {
+  let mut bodies: Vec<GrahaPos> = Vec::new();
+  for key in keys {
+    let result = calc_body_jd_topo(jd, key, geo);
+    bodies.push(result);
+  }
+  bodies
+}
+
+pub fn get_body_longitudes(jd: f64, geo: GeoPos, mode: &str) -> HashMap<String, f64> {
+  let mut items: HashMap<String, f64> = HashMap::new();
+  let keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ur", "ne", "pl", "ke"];
+  let bodies = match mode {
+    "topo" => get_bodies_ecl_topo(jd, keys, geo),
+    _ => get_bodies_ecl_geo(jd, keys),
+  };
+  items.insert("as".to_string(), calc_ascendant(jd, geo));
+  for body in bodies {
+    items.insert(body.key, body.lng);
+  }
+  items
+}
+
+
+pub fn get_body_longitudes_geo(jd: f64, geo: GeoPos) -> HashMap<String, f64> {
+  get_body_longitudes(jd, geo, "geo")
+}
+
+pub fn get_body_longitudes_topo(jd: f64, geo: GeoPos) -> HashMap<String, f64> {
+  get_body_longitudes(jd, geo, "topo")
 }
 
 pub fn get_bodies_dual_topo(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<GrahaPos> {

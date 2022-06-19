@@ -1,10 +1,10 @@
 use serde::{Serialize, Deserialize};
 use super::julian_date::*;
 use super::models::{geo_pos::*, graha_pos::*};
-use super::{traits::*, models::{general::*}};
+use super::{models::{general::{KeyNumValue, KeyNumValueSet}}};
 use super::{core::{calc_altitude,calc_body_jd, calc_body_jd_geo, calc_body_jd_topo}};
 
-const mins_day: i32 = 1440;
+const MINS_PER_DAY: i32 = 1440;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AltitudeSample {
@@ -34,7 +34,7 @@ impl AltitudeSample {
     }
   }
 
-  pub fn iso_date(&self) -> String {
+  pub fn datetime_string(&self) -> String {
     return if self.jd > 0f64 { julian_day_to_iso_datetime(self.jd) } else { "".to_string() };
   }
 
@@ -49,10 +49,10 @@ impl AltitudeSample {
 }
 
 pub fn calc_mid_point(first: AltitudeSample, second: AltitudeSample) -> f64 {
-  let valueDiff = second.value - first.value;
-  let progress = second.value / valueDiff;
-  let jdDiff = second.jd - first.jd;
-  second.jd - jdDiff * progress
+  let value_diff = second.value - first.value;
+  let progress = second.value / value_diff;
+  let jd_diff = second.jd - first.jd;
+  second.jd - jd_diff * progress
 }
 
 
@@ -79,7 +79,7 @@ fn recalc_min_max_transit_sample(
   let sample_rate = 0.25f64;
   let mut new_sample = sample;
   let num_sub_samples = multiplier as f64 * 2 as f64 * (1f64 / sample_rate);
-  let sample_start_jd = new_sample.jd - num_sub_samples / (2f64 / sample_rate) / mins_day as f64;
+  let sample_start_jd = new_sample.jd - num_sub_samples / (2f64 / sample_rate) / MINS_PER_DAY as f64;
   let sample_start_min = new_sample.mins - num_sub_samples / (2f64 / sample_rate);
   let mode = match max_mode { 
     true => "mc",
@@ -89,7 +89,7 @@ fn recalc_min_max_transit_sample(
   let max = num_sub_samples as i32 + 1;
   for i in 0..max {
     let mins = sample_start_min + i as f64 * sample_rate;
-    let jd = sample_start_jd + (i as f64 * sample_rate) / mins_day as f64;
+    let jd = sample_start_jd + (i as f64 * sample_rate) / MINS_PER_DAY as f64;
     let value = calc_altitude(jd, false, geo.lat, geo.lng, lng, lat);
     let item = AltitudeSample::new(mode, mins, jd, value);
     if max_mode && item.value > new_sample.value {
@@ -152,7 +152,7 @@ pub fn calc_transposed_object_transitions (
   filter: TransitionFilter,
   sample_key: &str,
 ) -> Vec<AltitudeSample> {
-  let max = mins_day / multiplier as i32;
+  let max = MINS_PER_DAY / multiplier as i32;
   let mut items: Vec<AltitudeSample> = Vec::new();
   let match_set = filter.match_set();
   let match_rise = filter.match_rise();
@@ -169,7 +169,7 @@ pub fn calc_transposed_object_transitions (
   let resample_speed = sample_key == "mo" && lng_speed != 0f64;
   for i in 0..max {
     let n = i as f64 * multiplier as f64;
-    let day_frac = n / mins_day as f64;
+    let day_frac = n / MINS_PER_DAY as f64;
     let jd = jd_start + day_frac;
     let mut sample_spd = lng_speed;
     let mut lat_spd = 0f64;

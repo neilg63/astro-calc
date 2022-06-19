@@ -14,7 +14,7 @@ pub fn match_house_num(lng: f64, houses: Vec<f64>) -> i32 {
   matchedIndex + 1
 };
 
-pub fn map_sign_to_house = (sign: f64, houses: Vec<f64>): f64 => {
+pub fn map_sign_to_house = (sign: f64, houses: Vec<f64>) -> f64 {
   let num_houses = houses.len();
   let mut hn = 0;
   if (num_houses > 0) {
@@ -25,7 +25,7 @@ pub fn map_sign_to_house = (sign: f64, houses: Vec<f64>): f64 => {
   return hn;
 };
 
-pub fn limitValueToRange = (num = 0, min = 0, max = 360): f64 => {
+pub fn limitValueToRange = (num = 0, min = 0, max = 360) -> f64 {
   let span = max - min;
   let val = (num - min) % span;
   let refVal = val > 0 ? val : span + val;
@@ -33,56 +33,64 @@ pub fn limitValueToRange = (num = 0, min = 0, max = 360): f64 => {
   return (min < 0 && (val < 0 || num > max))? 0 - outVal: outVal;
 }
 
-pub fn calcVargaValue = (lng: f64, num = 1) => (lng * num) % 360;
+pub fn calc_varga_value = (lng: f64, num = 1) => (lng * num) % 360;
 
 pub fn subtract_360(lng: f64, offset = 0) -> f64 {
   (lng + 360 as f64 - offset as f64) % 360f64
 }
 
-pub fn calcAllVargas = (lng: f64) => {
+pub fn calc_all_vargas(lng: f64) -> {
   return vargaValues.map(v => {
-    let value = calcVargaValue(lng, v.num);
+    let value = calc_varga_value(lng, v.num);
     return { num: v.num, key: v.key, value };
   });
-};
+}
 
-pub fn calcVargaSet = (lng, num, key) => {
-  let values = calcAllVargas(lng);
+pub fn calc_varga_set(lng: f64, num = u8, key: &str) -> {
+  let values = calc_all_vargas(lng);
   return {
     num,
     key,
     values,
   };
-};
+}
 
-pub fn calcInclusiveDistance = (
-  posOne: f64,
-  posTwo: f64,
-  base: f64,
-) => ((posOne - posTwo + base) % base) + 1;
+pub fn calc_inclusive_distance(
+  pos_1: u16,
+  pos_2: u16,
+  base: u16,
+) -> u16 {
+  ((pos_1 - pos_2 + base) % base) + 1
+}
 
-pub fn calcInclusiveTwelfths = (posOne: f64, posTwo: f64) =>
-  calcInclusiveDistance(posOne, posTwo, 12);
+pub fn calc_inclusive_twelfths(pos_1: u16, pos_2: u16) -> u16 {
+  calc_inclusive_distance(pos_1, pos_2, 12)
+}
+  
 
-pub fn calcInclusiveSignPositions = (sign1: f64, sign2: f64) =>
-  calcInclusiveDistance(sign2, sign1, 12);
+pub fn calc_inclusive_sign_positions(sign1: u8, sign2: u8) -> u8 {
+  calc_inclusive_twelfths(sign2 as u16, sign1 as u16, 12) as u8
+}
 
-pub fn calcInclusiveNakshatras = (posOne: f64, posTwo: f64) =>
-  calcInclusiveDistance(posOne, posTwo, 27);
+pub fn calc_inclusive_nakshatras(pos_1: u8, pos_2: u8) -> u8 {
+  calc_inclusive_twelfths(sign2 as u16, sign1 as u16, 27) as u8
+}
 
-pub fn midPointSurface = (coord1: GeoPos, coord2: GeoPos) => {
-  let c1 = geoToRadians(coord1);
-  let c2 = geoToRadians(coord2);
+pub fn mid_point_to_surface(coord1: GeoPos, coord2: GeoPos) -> GeoPos {
+  let c1 = geo_to_radians(coord1);
+  let c2 = geo_to_radians(coord2);
   let bx = Math.cos(c2.lat) * Math.cos(c2.lng - c1.lng);
   let by = Math.cos(c2.lat) * Math.sin(c2.lng - c1.lng);
-  let midLat = Math.atan2(
+  let mid_lat = Math.atan2(
     Math.sin(c1.lat) + Math.sin(c2.lat),
     Math.sqrt((Math.cos(c1.lat) + bx) * (Math.cos(c1.lat) + bx) + by * by),
   );
-  let midLng = c1.lng + Math.atan2(by, Math.cos(c1.lat) + bx);
-  return { lat: toDegrees(midLat), lng: toDegrees(midLng) };
-};
+  let mid_lng = c1.lng + Math.atan2(by, Math.cos(c1.lat) + bx);
+  let mid_alt = (c1.alt + c2.alt) / 2f64;
+  GeoPos::new( to_degrees(mid_lat), lng: to_degrees(mid_lng), mid_alt)
+}
 
+/* 
 pub fn approxTransitTimes = (geo: GeoPos, alt: f64, jd: f64, ra: f64, decl: f64): TransitJdSet => {
   let deltaT = getDeltaT(jd);
   let nut = nutation(jd + deltaT)[0];
@@ -107,33 +115,38 @@ pub fn approxTransitTimes = (geo: GeoPos, alt: f64, jd: f64, ra: f64, decl: f64)
   }
   return result;
 }
+ */
 
-pub fn to_360 = lng => (lng >= 0 ? lng + 180 : 180 + lng);
+pub fn to_360(lng: f64) -> f64 {
+  if lng >= 0f64 { lng + 180f64 }  else { 180f64 - lng };
+}
 
-pub fn from_360 = lng => (lng > 180 ? lng - 180 : 0 - (180 - lng));
+pub fn from_360(lng: f64) -> f64 {
+  if lng > 180f64 { lng - 180 } else { 0 - (180 - lng) };
+}
 
-let median_lat = (v1: f64, v2: f64) => {
-  let offset = 90;
-  return (v1 + offset + (v2 + offset)) / 2 - offset;
+pub fn median_lat(v1: f64, v2: f64) -> f64 {
+  let offset = 90f64;
+  return (v1 + offset + (v2 + offset)) / 2f64 - offset;
 };
 
-fn median_lng(v1: f64, v2: f64) -> LngLat {
+pub fn median_lng(v1: f64, v2: f64) -> LngLat {
   let offset = 180;
   let direction = v1;
-  let fullC = offset * 2;
+  let full_circle = offset * 2;
   let lngs = [to_360(v2), to_360(v1)];
   lngs.sort();
   const [d1, d2] = lngs;
   let reverse = Math.abs(d2 - d1) > offset;
-  let isWest = reverse ? v1 + v2 > 0 : v1 + v2 < 0;
-  let res360 = ((d1 + d2) % fullC) / 2;
-  let resA = from_360(res360) % offset;
-  let res1 = isWest ? resA : 0 - resA;
-  let resB = offset - res1;
-  let res2a = isWest ? fullC - resB : resB;
-  let res2 = isWest && res2a > 0 ? 0 - res2a : res2a;
-  let res2isBetween = to_360(res2) > d1 && to_360(res2) <= d2;
-  let result = reverse || res2isBetween ? res2 : res1;
+  let is_west = reverse ? v1 + v2 > 0 : v1 + v2 < 0;
+  let res360 = ((d1 + d2) % full_circle) / 2;
+  let res_a = from_360(res360) % offset;
+  let res1 = if is_west { res_a } : { 0 - res_a };
+  let res_b = offset - res1;
+  let res2a = if is_west  { full_circle - res_b } else { res_b };
+  let res2 = if is_west && res2a > 0  { 0 - res2a } else { res2a };
+  let res2_is_between = to_360(res2) > d1 && to_360(res2) <= d2;
+  let result = if reverse || res2_is_between  { res2 } else { res1 };
   return result;
 }
 
