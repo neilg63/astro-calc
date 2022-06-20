@@ -1,8 +1,7 @@
 use math::round::{floor};
 use libswe_sys::sweconst::{Bodies, OptionalFlag};
 use libswe_sys::swerust::{handler_swe03::*, handler_swe07::*};
-use super::settings::{ayanamshas::*};
-use super::traits::*;
+use super::{settings::{ayanamshas::*},traits::*, julian_date::julian_day_to_iso_datetime};
 use super::models::{graha_pos::*, geo_pos::*, general::*, houses::{calc_ascendant}};
 use super::super::extensions::swe::{azalt, set_topo, set_sid_mode, get_ayanamsha};
 use std::collections::{HashMap};
@@ -213,9 +212,32 @@ pub fn calc_altitude(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f64, ln
   azalt(tjd_ut, is_equal, geo_lat, geo_lng, lng, lat).value
 }
 
-pub fn get_ayanamsha_value(jd: f64, key: &str) -> f64 {
+pub fn calc_true_citra(jd: f64) -> f64 {
+  let jd1 = 2422324.5f64;
+  let p1 = 0.9992925739019888f64;
+  let jd2 = 2458849.5f64;
+  let p2 = 0.99928174751934f64;
+  let jd3 = 2495373.5f64;
+  let p3 = 0.9992687765534588f64;
+  let diff_jd2 = jd - jd2;
+  let before2020 = diff_jd2 < 0f64;
+  let dist = if before2020 { (0f64 - diff_jd2) / (jd2 - jd1) } else { diff_jd2 / (jd3 - jd2) };
+  let diff_p = if before2020 {  p2 - p1 } else { p3 - p2 };
+  let multiple = if before2020 { p2 - (diff_p * dist) } else { p2 + (diff_p * dist) };
+  get_ayanamsha_value_raw(jd, "lahiri") * multiple
+}
+
+pub fn get_ayanamsha_value_raw(jd: f64, key: &str) -> f64 {
   let aya_flag = Ayanamsha::from_key(key);
   get_ayanamsha(jd, aya_flag)
+}
+
+pub fn get_ayanamsha_value(jd: f64, key: &str) -> f64 {
+  let aya_flag = Ayanamsha::from_key(key);
+  match aya_flag {
+    Ayanamsha::TrueCitra => calc_true_citra(jd),
+    _ => get_ayanamsha(jd, aya_flag)
+  }
 }
 
 pub fn get_ayanamsha_values(jd: f64, keys: Vec<&str>) -> Vec<KeyNumValue> {
