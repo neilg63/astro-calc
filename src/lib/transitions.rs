@@ -28,11 +28,11 @@ impl TransitionParams {
   }
 
   pub fn mc() -> i32 {
-    TransitionParams::Mc as i32
+    TransitionParams::BitNoRefraction as i32 | TransitionParams::Mc as i32
   }
 
   pub fn ic() -> i32 {
-    TransitionParams::Ic as i32
+    TransitionParams::BitNoRefraction as i32 | TransitionParams::Ic as i32
   }
 }
 
