@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-const default_altitude: f64 = 10f64;
+const DEFAULT_ALTITUDE: f64 = 10f64;
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub struct GeoPos {
@@ -22,7 +22,7 @@ impl GeoPos {
     return GeoPos {
       lat: lat,
       lng: lng,
-      alt: default_altitude
+      alt: DEFAULT_ALTITUDE
     }
   }
 
@@ -33,7 +33,7 @@ impl GeoPos {
     return GeoPos {
       lat: 0f64,
       lng: 0f64,
-      alt: default_altitude
+      alt: 0f64
     }
   }
 

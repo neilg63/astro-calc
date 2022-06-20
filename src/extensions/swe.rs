@@ -80,7 +80,7 @@ pub fn rise_trans(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, iflag: i32) -> f
   let result = unsafe {
       let p_xx = xx.as_mut_ptr();
       let p_serr = serr.as_mut_ptr();
-      let status = swe_rise_trans(
+      swe_rise_trans(
           tjd_ut,
           ipl as i32,
           star_ref,
@@ -92,7 +92,7 @@ pub fn rise_trans(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, iflag: i32) -> f
           p_xx,
           p_serr,
       );
-      status
+      *p_xx
   };
   result
 }
