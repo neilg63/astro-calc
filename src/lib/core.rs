@@ -243,7 +243,7 @@ pub fn get_ayanamsha_value(jd: f64, key: &str) -> f64 {
 pub fn get_ayanamsha_values(jd: f64, keys: Vec<&str>) -> Vec<KeyNumValue> {
   let mut items: Vec<KeyNumValue> = Vec::new();
   for key in keys {
-    let value = get_ayanamsha(jd, Ayanamsha::from_key(key));
+    let value = get_ayanamsha_value(jd, key);
     items.push(KeyNumValue::new(key, value));
   }
   items
@@ -253,7 +253,7 @@ pub fn get_all_ayanamsha_values(jd: f64) -> Vec<KeyNumValue> {
   let mut items: Vec<KeyNumValue> = Vec::new();
   let keys = all_ayanamsha_keys();
   for key in keys {
-    let value = get_ayanamsha(jd, Ayanamsha::from_key(key));
+    let value = get_ayanamsha_value(jd, key);
     items.push(KeyNumValue::new(key, value));
   }
   items
