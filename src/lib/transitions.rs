@@ -1,6 +1,7 @@
 use serde::{Serialize, Deserialize};
 use super::super::extensions::swe::{rise_trans};
 use libswe_sys::sweconst::{Bodies};
+use libswe_sys::swerust::{handler_swe07::{pheno_ut, PhenoUtResult}};
 use super::{traits::*, models::{geo_pos::*, general::*}};
 
 pub enum TransitionParams {
@@ -19,8 +20,20 @@ impl TransitionParams {
     TransitionParams::Center as i32 | TransitionParams::BitNoRefraction as i32 | TransitionParams::BitGeoctrNoEclLat as i32
   }
 
+  pub fn bottom_disc_rising() -> i32 {
+    TransitionParams::Bottom as i32 | TransitionParams::BitNoRefraction as i32 | TransitionParams::BitGeoctrNoEclLat as i32
+  }
+
   pub fn center_disc_rising_rise() -> i32 {
     TransitionParams::center_disc_rising() + TransitionParams::Rise as i32
+  }
+
+  pub fn rise_normal() -> i32 {
+    TransitionParams::BitNoRefraction as i32 | TransitionParams::Rise as i32
+  }
+
+  pub fn set_normal() -> i32 {
+    TransitionParams::BitNoRefraction as i32 | TransitionParams::Set as i32
   }
 
   pub fn center_disc_rising_set() -> i32 {
@@ -28,11 +41,11 @@ impl TransitionParams {
   }
 
   pub fn mc() -> i32 {
-    TransitionParams::BitNoRefraction as i32 | TransitionParams::Mc as i32
+    TransitionParams::bottom_disc_rising()| TransitionParams::Mc as i32
   }
 
   pub fn ic() -> i32 {
-    TransitionParams::BitNoRefraction as i32 | TransitionParams::Ic as i32
+    TransitionParams::bottom_disc_rising() | TransitionParams::Ic as i32
   }
 }
 
@@ -93,6 +106,35 @@ impl TransitionGroup for TransitionSet {
   }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PhenoResult {
+  #[serde(rename="phaseAngle")]
+  pub phase_angle: f64,
+  #[serde(rename="phaseIlluminated")]
+  pub phase_illuminated: f64,
+  #[serde(rename="elongationOfPlanet")]
+  pub elongation_of_planet: f64,
+  #[serde(rename="apparentDiameterOfDisc")]
+  pub apparent_diameter_of_disc: f64,
+  #[serde(rename="apparentMagnitude")]
+  pub apparent_magnitude: f64,
+}
+
+impl PhenoResult {
+  pub fn new(phase_angle: f64, phase_illuminated: f64, elongation_of_planet: f64, apparent_diameter_of_disc: f64, apparent_magnitude: f64) -> PhenoResult {
+    PhenoResult{ phase_angle: phase_angle, phase_illuminated, elongation_of_planet, apparent_diameter_of_disc,  apparent_magnitude }
+  }
+
+  pub fn new_from_result(result: PhenoUtResult) -> PhenoResult {
+    PhenoResult{ 
+      phase_angle: result.phase_angle,
+      phase_illuminated: result.phase_illuminated,
+      elongation_of_planet: result.elongation_of_planet,
+      apparent_diameter_of_disc: result.apparent_dimaeter_of_disc,
+      apparent_magnitude: result.apparent_magnitude
+     }
+  }
+}
 
 pub fn calc_transition_set_extended(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> ExtendedTransitionSet {
   let ref_jd = start_jd_geo(jd, lng);
@@ -123,6 +165,9 @@ pub fn calc_transition_set(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> Transiti
   let set = next_set(rise, ipl, lat, lng);
   let mc = next_mc(ref_jd, ipl, lat, lng);
   let ic = next_ic(ref_jd, ipl, lat, lng);
+  /* let mc_normal = next_mc_normal(ref_jd, ipl, lat, lng);
+  let ic_normal = next_ic_normal(mc_normal, ipl, lat, lng);
+  println!("mc {}, mc_n {}, ic_n {}", mc, mc_normal, ic_normal); */
   TransitionSet { 
     rise: rise,
     mc: mc,
@@ -163,6 +208,26 @@ pub fn next_set(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
   rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::center_disc_rising_set())
 }
 
+pub fn next_rise_normal(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
+  rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::rise_normal())
+}
+
+pub fn next_set_normal(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
+  rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::set_normal())
+}
+
+pub fn next_mc_normal(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
+  let rise_n = rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::rise_normal());
+  let set_n = rise_trans(rise_n, ipl, lat, lng, TransitionParams::set_normal());
+  (set_n + rise_n) / 2f64
+}
+
+pub fn next_ic_normal(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
+  let set_n = rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::set_normal());
+  let next_rise_n = rise_trans(set_n, ipl, lat, lng, TransitionParams::rise_normal());
+  (next_rise_n + set_n) / 2f64
+}
+
 pub fn next_mc(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
   rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::mc())
 }
@@ -200,4 +265,11 @@ pub fn get_transition_sets(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<KeyNumV
     transit_sets.push(KeyNumValueSet::new(key, tr_set));
   }
   transit_sets
+}
+
+
+pub fn get_pheno_result(jd: f64, key: &str, iflag: i32) -> PhenoResult {
+  let ipl = Bodies::from_key(key);
+  let result = pheno_ut(jd, ipl, iflag);
+  PhenoResult::new_from_result(result)
 }

@@ -25,6 +25,7 @@ use actix_web::{get, App, HttpServer, Responder, HttpRequest, web::{self, Data}}
 use std::path::Path;
 use std::collections::{HashMap};
 
+
 const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
 const DEFAULT_PORT: u32 = 8087;
 /// Astrologic engine config
@@ -130,6 +131,16 @@ async fn chart_data(req: HttpRequest) -> impl Responder {
   web::Json(json!({ "valid": valid, "date": info, "geo": geo, "bodies": data, "house": house_data, "ayanamshas": ayanamshas, "transitions": transitions }))
 }
 
+#[get("/pheno/{body}/{dateref}")]
+async fn pheno_data(req: HttpRequest) -> impl Responder {
+  let dateref: String = req.match_info().get("dateref").unwrap().parse().unwrap();
+  let body_key: String = req.match_info().query("body").parse().unwrap();
+  let info = DateInfo::new(dateref.to_string().as_str());
+  let result = get_pheno_result(info.jd, body_key.as_str(), 0i32);
+  let valid = result.phase_illuminated != 0f64; 
+  web::Json(json!({ "valid": valid, "date": info, "result": result }))
+}
+
 #[get("/transposed-transitions/{current_date}/{current_loc}/{historic_date}/{historic_loc}")]
 async fn body_transposed_transitions(req: HttpRequest) -> impl Responder {
   let dateref: String = req.match_info().get("historic_date").unwrap().parse().unwrap();
@@ -206,9 +217,12 @@ async fn main()  -> std::io::Result<()> {
           .service(chart_data)
           .service(list_sun_transitions)
           .service(body_transposed_transitions)
+          .service(pheno_data)
           .route("/{sec1}", web::get().to(route_not_found))
           .route("/{sec1}/{sec2}", web::get().to(route_not_found))
           .route("/{sec1}/{sec2}/{sec3}", web::get().to(route_not_found))
+          .route("/{sec1}/{sec2}/{sec3}/{sec4}", web::get().to(route_not_found))
+          .route("/{sec1}/{sec2}/{sec3}/{sec4}/{sec5}", web::get().to(route_not_found))
       } else {
         App::new()
         .app_data(Data::clone(&data))
@@ -216,6 +230,8 @@ async fn main()  -> std::io::Result<()> {
           .route("/{sec1}", web::get().to(welcome_not_configured))
           .route("/{sec1}/{sec2}", web::get().to(welcome_not_configured))
           .route("/{sec1}/{sec2}/{sec3}", web::get().to(welcome_not_configured))
+          .route("/{sec1}/{sec2}/{sec3}/{sec4}", web::get().to(route_not_found))
+          .route("/{sec1}/{sec2}/{sec3}/{sec4}/{sec5}", web::get().to(route_not_found))
       }
   })
   .bind(("127.0.0.1", 8087))?
