@@ -105,6 +105,5 @@ pub fn all_ayanamsha_keys() -> Vec<&'static str> {
     "sassanian",
     "ushashashi",
     "jnbhasin",
-    "tropical",
   ]
 }
