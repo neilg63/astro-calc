@@ -64,7 +64,7 @@ impl FromKey<Ayanamsha> for Ayanamsha {
   fn from_key(key: &str) -> Self {
     let simple_str = key.to_lowercase().replace("_", "");
     match simple_str.as_str() {
-      "truecitra" | "citra" | "chitra" => Ayanamsha::TrueCitra,
+      "truecitra" | "true_citra" | "citra" | "chitra" => Ayanamsha::TrueCitra,
       "lahiri" => Ayanamsha::Lahiri,
       "krishnamurti" => Ayanamsha::Krishnamurti,
       "yukteshwar" => Ayanamsha::Yukteshwar,
