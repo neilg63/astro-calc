@@ -27,9 +27,9 @@ extern "C" {
       geopos: *mut [c_double; 3],
       atpress: c_double,
       attemp: c_double,
-      tret: *mut c_double,
+      tret: *mut [c_double; 3],
       serr: *mut c_char
-  ) -> c_double;
+  );
 
   /*
    double tjd_ut,
@@ -72,13 +72,13 @@ extern "C" {
 
 }
 
-pub fn rise_trans(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, iflag: i32) -> f64 {
-  let mut xx: [f64; 6] = [0.0; 6];
+pub fn rise_trans_raw(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, iflag: i32) -> [f64; 3] {
+  //let mut xx: [f64; 6] = [0.0; 6];
   let mut serr = [0; 255];
   let geopos = &mut [lng, lat, 0f64];
   let star_ref = &mut [];
   let result = unsafe {
-      let p_xx = xx.as_mut_ptr();
+      let p_xx = &mut [0f64, 0f64, 0f64];
       let p_serr = serr.as_mut_ptr();
       swe_rise_trans(
           tjd_ut,
@@ -95,6 +95,11 @@ pub fn rise_trans(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, iflag: i32) -> f
       *p_xx
   };
   result
+}
+
+pub fn rise_trans(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, iflag: i32) -> f64 {
+  let result = rise_trans_raw(tjd_ut, ipl, lat, lng, iflag);
+  return result[0];
 }
 
 /*

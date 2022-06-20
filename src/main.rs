@@ -25,7 +25,6 @@ use actix_web::{get, App, HttpServer, Responder, HttpRequest, web::{self, Data}}
 use std::path::Path;
 use std::collections::{HashMap};
 
-
 const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
 const DEFAULT_PORT: u32 = 8087;
 /// Astrologic engine config
