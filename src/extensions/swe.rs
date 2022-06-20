@@ -146,7 +146,7 @@ pub fn get_ayanamsha(tjd_ut: f64, mode: Ayanamsha) -> f64 {
       );
       status
   };
-  set_sid_mode(0);
+  //set_sid_mode(0);
   result
 }
 

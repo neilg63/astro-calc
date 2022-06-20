@@ -3,8 +3,7 @@ mod extensions;
 
 extern crate serde_derive;
 extern crate serde_json;
-extern crate libswe_sys;  
-extern crate ordered_float;
+extern crate libswe_sys;
 extern crate chrono;
 
 /* //use libswe_sys::sweconst::{Bodies, Calandar, HouseSystem};
@@ -25,7 +24,7 @@ use actix_web::{get, App, HttpServer, Responder, HttpRequest, web::{self, Data}}
 use std::path::Path;
 use std::collections::{HashMap};
 
-
+//const SWEPH_PATH_DEFAULT: &str = "/Users/neil/apps/findingyou/findingyou-api/src/astrologic/ephe";
 const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
 const DEFAULT_PORT: u32 = 8087;
 /// Astrologic engine config
@@ -178,8 +177,8 @@ fn key_num_values_to_map(items: Vec<KeyNumValue>) -> HashMap<String, f64> {
 }
 
 async fn welcome() -> impl Responder {
-  let num_items = vec![KeyNumValue::new("age", 98.8), KeyNumValue::new("height", 177.2)];
-  web::Json( json!({ "message": "Welcome to Astro API", "time": DateInfo::now(), "extra": key_num_values_to_map(num_items) }))
+  let ephe_path =  get_library_path();
+  web::Json( json!({ "message": "Welcome to Astro API", "time": DateInfo::now(), "ephemerisPath": ephe_path }))
 }
 
 async fn welcome_not_configured() -> impl Responder {
