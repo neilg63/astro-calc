@@ -60,3 +60,17 @@ impl NumValueKeySet {
     NumValueKeySet { num, key: key.to_string(), values }
   }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ProgressItemSet {
+  pd: f64,
+  jd: f64,
+  bodies : Vec<KeyNumValue>,
+  ayanamsha: f64,
+}
+
+impl ProgressItemSet {
+  pub fn new(pd: f64, jd: f64, bodies: Vec<KeyNumValue>, ayanamsha: f64) -> ProgressItemSet {
+    ProgressItemSet { pd, jd, bodies, ayanamsha }
+  }
+}

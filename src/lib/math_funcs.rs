@@ -1,6 +1,26 @@
 use super::models::{general::*, geo_pos::*, chart::{LngLat}};
 use super::settings::varga_values::*;
 use super::utils::minmax::*;
+use super::julian_date::datetime_to_julian_day;
+
+pub fn get_year_length(year_type: &str) -> f64 {
+  let yt = match year_type {
+    "sidereal" => 365.256366,
+    "anomalistic" => 365.259636,
+    _ => 365.242199
+  };
+  yt as f64
+}
+
+pub fn to_progression_jd(
+  source_jd: f64,
+  ref_jd: f64,
+  year_type: &str,
+) -> f64 {
+  let age_in_days = ref_jd - source_jd;
+  let projected_duration = age_in_days / get_year_length(year_type);
+  source_jd + projected_duration
+}
 
 pub fn match_house_num(lng: f64, houses: Vec<f64>) -> u8 {
   let len = houses.len();
@@ -127,4 +147,20 @@ pub fn median_lat_lng(coord1: GeoPos, coord2: GeoPos) -> LngLat {
     median_lng(coord1.lng, coord2.lng),
     median_lat(coord1.lat, coord2.lat),
   )
+}
+
+pub fn calc_progress_day_jds_by_year(source_jd: f64, start_year: u32, years: u16, per_year: u8) -> Vec<(f64, f64)> {
+  let year_start_str = format!("{}-01-01T00:00:00", start_year);
+  let start_jd = datetime_to_julian_day(year_start_str.as_str());
+  let start_p2_jd = to_progression_jd(source_jd, start_jd, "tropical");
+  let mut items: Vec<(f64, f64)> = Vec::new();
+  let interval = 1f64 / per_year as f64;
+  let interval_yr = get_year_length("tropical");
+  let num_items = years as u32 * per_year as u32;
+  for i in 0..num_items {
+    let ref_jd = start_p2_jd + (interval * i as f64);
+    let ref_year_jd = start_jd + (interval_yr * i as f64);
+    items.push((ref_jd, ref_year_jd));
+  }
+  items
 }

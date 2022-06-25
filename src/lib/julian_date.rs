@@ -1,4 +1,4 @@
-use chrono::{NaiveDateTime};
+use chrono::{NaiveDateTime, Datelike};
 
 pub enum JulianDayEpoch {
   Days = 2440587, // ref year in julian days
@@ -79,4 +79,8 @@ pub fn current_jd() -> f64 {
 
 pub fn current_datetime_string() -> String {
   NaiveDateTime::from_timestamp(chrono::offset::Utc::now().timestamp(), 0).format("%Y-%m-%dT%H:%M:%S").to_string()
+}
+
+pub fn current_year() -> i32 {
+  NaiveDateTime::from_timestamp(chrono::offset::Utc::now().timestamp(), 0).year()
 }
