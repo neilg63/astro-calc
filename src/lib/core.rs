@@ -176,8 +176,6 @@ pub fn get_bodies_ecl_topo(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<GrahaPo
 pub fn get_bodies_p2(jd: f64, keys: Vec<String>, start_year: u32, num_years: u16, per_year: u8) -> Vec<ProgressItemSet> {
   let mut items: Vec<ProgressItemSet> = Vec::new();
   let jd_pairs = calc_progress_day_jds_by_year(jd, start_year, num_years, per_year);
-  /* let dt_pairs:Vec<(String, String)> = jd_pairs.into_iter().map(|p|  (julian_day_to_iso_datetime(p.0) , julian_day_to_iso_datetime(p.1))).collect();
-  println!("{:?}",dt_pairs); */
   for pair in jd_pairs {
     let (ref_pd, ref_jd) = pair;
     let ayanamsha = get_ayanamsha_value(ref_pd, "true_citra");
@@ -186,7 +184,6 @@ pub fn get_bodies_p2(jd: f64, keys: Vec<String>, start_year: u32, num_years: u16
       let result = calc_body_jd_geo(jd, key.as_str());
       body_items.push(KeyNumValue::new(key.as_str(), result.lng));
     }
-    
     items.push(ProgressItemSet::new(ref_pd, ref_jd, body_items, ayanamsha));
   }
   items

@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
-use super::super::julian_date::*;
-use super::super::traits::*;
+use super::{chart::{LngLat}};
+use super::super::{julian_date::*, traits::*};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BodyPos {
@@ -151,4 +151,10 @@ impl ToISODateString for GrahaPosSet {
     julian_day_to_iso_datetime(self.jd)
   }
 
+}
+
+pub enum FlexiBodyPos {
+  LngLat(LngLat),
+  Simple(BodyPos),
+  Extended(GrahaPos),
 }
