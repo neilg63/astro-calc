@@ -148,11 +148,8 @@ pub fn calc_transition_set_extended(jd: f64, ipl: Bodies, lat: f64, lng: f64) ->
   let set = next_set(ref_jd, ipl, lat, lng);
 
   //let mc = next_mc_q(ref_jd, ipl, lat, lng, rise);
-  let mc = next_mc(ref_jd, ipl, lat, lng);
-  //let mc = 0f64;
-  //let ic = 0f64;
-  //let ic = next_ic_q(ref_jd, ipl, lat, lng, set);
-  let ic = next_ic(ref_jd, ipl, lat, lng);
+  let mc = next_mc_normal(ref_jd, ipl, lat, lng);
+  let ic = next_ic_normal(ref_jd, ipl, lat, lng);
   let next_rise = next_rise(set, ipl, lat, lng);
   ExtendedTransitionSet { 
     prev_set,
@@ -269,6 +266,20 @@ pub fn get_transition_sets(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<KeyNumV
       _ => calc_transition_set(jd, Bodies::from_key(key), geo.lat, geo.lng).to_key_nums(),
     };
     transit_sets.push(KeyNumValueSet::new(key, tr_set));
+  }
+  transit_sets
+}
+
+pub fn get_transition_sets_extended(jd: f64, keys: Vec<String>, geo: GeoPos, days: u16) -> Vec<KeyNumValueSet> {
+  let mut transit_sets: Vec<KeyNumValueSet> = Vec::new();
+  for key in keys {
+    let mut tr_set: Vec<KeyNumValue> = Vec::new();
+    for i in 0..days {
+      let ref_jd = jd + i as f64;
+      let mut tr_set_day = calc_transition_set(ref_jd, Bodies::from_key(key.as_str()), geo.lat, geo.lng).to_key_nums();
+      tr_set.append(&mut tr_set_day);
+    }
+    transit_sets.push(KeyNumValueSet::new(key.as_str(), tr_set));
   }
   transit_sets
 }

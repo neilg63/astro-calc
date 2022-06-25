@@ -35,3 +35,28 @@ impl KeyNumValueSet {
     KeyNumValueSet { key: key.to_string(), items }
   }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct NumValue {
+  pub num: u16,
+  pub value: f64,
+}
+
+impl NumValue {
+  pub fn new(num: u16, value: f64) -> NumValue {
+    NumValue { num, value }
+  }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct NumValueKeySet {
+  pub num: u16,
+  pub key: String,
+  pub values: Vec<NumValue>,
+}
+
+impl NumValueKeySet {
+  pub fn new(num: u16, key: &str, values: Vec<NumValue>) -> NumValueKeySet {
+    NumValueKeySet { num, key: key.to_string(), values }
+  }
+}

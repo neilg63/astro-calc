@@ -30,10 +30,10 @@ pub struct LngLat {
 }
 
 impl LngLat {
-  fn new(lng: f64, lat: f64) -> LngLat {
+  pub fn new(lng: f64, lat: f64) -> LngLat {
     LngLat { lng, lat }
   }
-  fn empty() -> LngLat {
+  pub fn empty() -> LngLat {
     LngLat { lng: -1f64, lat: -1f64 }
   }
 }

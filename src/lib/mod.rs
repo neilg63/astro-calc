@@ -6,3 +6,4 @@ pub mod settings;
 pub mod models;
 pub mod utils;
 pub mod traits;
+pub mod math_funcs;

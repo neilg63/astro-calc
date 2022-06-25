@@ -23,9 +23,10 @@ use std::sync::Mutex;
 use actix_web::{get, App, HttpServer, Responder, HttpRequest, web::{self, Data}};
 use std::path::Path;
 use std::collections::{HashMap};
+use lib::julian_date::{current_datetime_string};
 
-//const SWEPH_PATH_DEFAULT: &str = "/Users/neil/apps/findingyou/findingyou-api/src/astrologic/ephe";
-const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
+const SWEPH_PATH_DEFAULT: &str = "/Users/neil/apps/findingyou/findingyou-api/src/astrologic/ephe";
+//const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
 const DEFAULT_PORT: u32 = 8087;
 /// Astrologic engine config
 #[derive(Parser, Debug)]
@@ -34,9 +35,28 @@ struct Args {
     // Ephemeris path
     #[clap(short, long, value_parser, default_value_t = SWEPH_PATH_DEFAULT.to_string() )]
     ephemeris: String,
-
     #[clap(short, long, value_parser, default_value_t = DEFAULT_PORT )]
     port: u32,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+struct InputOptions {
+  dt: Option<String>, // primary UTC date string
+  dtl: Option<String>, // primary date string in local time (requires offset)
+  jd: Option<f64>, // primary jd as a float
+  dt2: Option<String>, // secondary UTC date string 
+  dtl2: Option<String>, // secondary date string in local time (requires offset)
+  jd2: Option<f64>, // secondary jd as a float
+  offset: Option<i32>, // offset is seconds from UTC
+  bodies: Option<String>, // either a comma separated list of required 2-letter celestial body keys or body group keys
+  topo: Option<u8>, // 0 = geocentrice, 1 topocentric, default 0
+  eq: Option<u8>, // 0 = ecliptic, 1 equatorial, 2 both default 0
+  days: Option<u16>, // duration in days where applicable
+  years: Option<u16>, // duration in years where applicable
+  loc: Option<String>, // comma-separated lat,lng(,alt) numeric string
+  loc2: Option<String>, // comma-separated lat,lng(,alt) numeric string
+  body: Option<String>, // primary celestial body key
+  ct: Option<u8>, // show current transitions (for transposed transitions and chart-data )
 }
 
 
@@ -53,6 +73,15 @@ fn loc_string_to_geo(loc: &str) -> Option<GeoPos> {
   } else {
     None
   }
+}
+
+fn body_keys_str_to_keys(key_string: String) -> Vec<String> {
+  key_string.split(",").into_iter().filter(|p| p.len() == 2).map(|p| p.to_string()).collect()
+}
+
+fn body_keys_str_to_keys_or(key_string: String, default_keys: Vec<&str>) -> Vec<String> {
+  let keys: Vec<String> = body_keys_str_to_keys(key_string);
+  if keys.len() > 0 { keys } else { default_keys.into_iter().map(|p| p.to_string() ).collect() }
 }
 
 #[get("/jd/{dateref}")]
@@ -114,6 +143,22 @@ async fn list_sun_transitions(req: HttpRequest) -> impl Responder {
   web::Json(json!({ "valid": valid, "date": info, "geo": geo, "sunTransitions": sun_transitions }))
 }
 
+#[get("/transitions")]
+async fn list_transitions(req: HttpRequest, params: web::Query<InputOptions>) -> impl Responder {
+  let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
+  let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
+  let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+  let info = DateInfo::new(dateref.to_string().as_str());
+  let def_keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa"];
+  let key_string: String = params.bodies.clone().unwrap_or("".to_string());
+  let keys = body_keys_str_to_keys_or(key_string, def_keys);
+  let days_int = params.days.unwrap_or(1u16);
+  let num_days = if days_int >= 1 { days_int } else { 1u16 };
+  let transition_sets = get_transition_sets_extended(info.jd, keys, geo, num_days);
+  let valid = transition_sets.len() > 0;
+  web::Json(json!({ "valid": valid, "date": info, "geo": geo, "transitionSets": transition_sets }))
+}
+
 #[get("/chart-data/{dateref}/{loc}")]
 async fn chart_data(req: HttpRequest) -> impl Responder {
   let dateref: String = req.match_info().get("dateref").unwrap().parse().unwrap();
@@ -140,20 +185,26 @@ async fn pheno_data(req: HttpRequest) -> impl Responder {
   web::Json(json!({ "valid": valid, "date": info, "result": result }))
 }
 
-#[get("/transposed-transitions/{current_date}/{current_loc}/{historic_date}/{historic_loc}")]
-async fn body_transposed_transitions(req: HttpRequest) -> impl Responder {
-  let dateref: String = req.match_info().get("historic_date").unwrap().parse().unwrap();
-  let loc: String = req.match_info().query("historic_loc").parse().unwrap();
+#[get("/transposed-transitions")]
+async fn body_transposed_transitions_range(req: HttpRequest, params: web::Query<InputOptions>) -> impl Responder {
+  let dateref: String = params.dt2.clone().unwrap_or(current_datetime_string());
+  let loc: String = params.loc2.clone().unwrap_or("0,0".to_string());
   let historic_geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
-  let current_loc: String = req.match_info().query("current_loc").parse().unwrap();
+  let current_loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let current_geo = if let Some(geo_pos) = loc_string_to_geo(current_loc.as_str()) { geo_pos } else { GeoPos::zero() };
-  let dateref_current: String = req.match_info().get("current_date").unwrap().parse().unwrap();
-  let keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ke"];
+  let dateref_current: String = params.dt.clone().unwrap_or(current_datetime_string());
+  let show_transitions: bool = params.ct.clone().unwrap_or(0) > 0;
+  let def_keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa"];
+  let key_string: String = params.bodies.clone().unwrap_or("".to_string());
+  let keys = body_keys_str_to_keys_or(key_string, def_keys);
+  let days_int = params.days.unwrap_or(1u16);
+  let num_days = if days_int >= 1 { days_int } else { 1u16 };
   let historic_dt = DateInfo::new(dateref.to_string().as_str());
   let current_dt = DateInfo::new(dateref_current.to_string().as_str());
-  let transitions = calc_transposed_graha_transitions_from_source_refs_geo(current_dt.jd, current_geo, historic_dt.jd, historic_geo, keys);
+  let transitions = calc_transposed_graha_transitions_from_source_refs_geo(current_dt.jd, current_geo, historic_dt.jd, historic_geo, keys.clone(), num_days);
   let valid = transitions.len() > 0;
-  web::Json(json!({ "valid": valid, "date": current_dt, "geo": current_geo, "historicDate": historic_dt, "historicGeo": historic_geo, "transitions": transitions }))
+  let current_transitions:  Vec<KeyNumValueSet> = if show_transitions { get_transition_sets_extended(current_dt.jd, keys, current_geo, num_days) } else { Vec::new() };
+  web::Json(json!({ "valid": valid, "date": current_dt, "geo": current_geo, "historicDate": historic_dt, "historicGeo": historic_geo, "days": num_days, "transposedTransitions": transitions, "currentTransitions": current_transitions }))
 }
 
 async fn date_now() -> impl Responder {
@@ -177,8 +228,7 @@ fn key_num_values_to_map(items: Vec<KeyNumValue>) -> HashMap<String, f64> {
 }
 
 async fn welcome() -> impl Responder {
-  let ephe_path =  get_library_path();
-  web::Json( json!({ "message": "Welcome to Astro API", "time": DateInfo::now(), "ephemerisPath": ephe_path }))
+  web::Json( json!({ "message": "Welcome to Astro API", "time": DateInfo::now() }))
 }
 
 async fn welcome_not_configured() -> impl Responder {
@@ -194,7 +244,7 @@ async fn main()  -> std::io::Result<()> {
   
     let args = Args::parse();
     let ephemeris_path = args.ephemeris;
-    let port = args.port as u32;
+    let port = args.port as u16;
     let has_path = Path::new(&ephemeris_path).exists();
     if  has_path {
       set_ephe_path(ephemeris_path.as_str());
@@ -215,8 +265,9 @@ async fn main()  -> std::io::Result<()> {
           .service(body_positions)
           .service(chart_data)
           .service(list_sun_transitions)
-          .service(body_transposed_transitions)
           .service(pheno_data)
+          .service(list_transitions)
+          .service(body_transposed_transitions_range)
           .route("/{sec1}", web::get().to(route_not_found))
           .route("/{sec1}/{sec2}", web::get().to(route_not_found))
           .route("/{sec1}/{sec2}/{sec3}", web::get().to(route_not_found))
@@ -233,7 +284,7 @@ async fn main()  -> std::io::Result<()> {
           .route("/{sec1}/{sec2}/{sec3}/{sec4}/{sec5}", web::get().to(route_not_found))
       }
   })
-  .bind(("127.0.0.1", 8087))?
+  .bind(("127.0.0.1", port))?
   .run()
   .await
 }

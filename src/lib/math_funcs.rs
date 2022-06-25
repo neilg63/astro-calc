@@ -1,60 +1,59 @@
+use super::models::{general::*, geo_pos::*, chart::{LngLat}};
+use super::settings::varga_values::*;
+use super::utils::minmax::*;
 
-pub fn match_house_num(lng: f64, houses: Vec<f64>) -> i32 {
+pub fn match_house_num(lng: f64, houses: Vec<f64>) -> u8 {
   let len = houses.len();
-  let min_val = if len > 0 { min } else { 0f64 };
-  let min_index = houses.iter().position(|v| v == min_val).unwrap();
-  let matched_index = houses.iter().position(|deg, index| => {
+  let min_val = if len > 0 { min_f64(houses.clone()) } else { 0f64 };
+  let min_index = houses.clone().into_iter().position(|v| v == min_val).unwrap();
+  let mut index: usize = 0;
+  let matched_index = houses.iter().position(|deg| {
     let next_index = (index + 1) % len;
-    let next = houses[nextIndex];
-    let end = if next < deg  { next + 360 } else { next };
+    let next = houses.get(next_index).unwrap();
+    let end = if next < deg  { next + 360f64 } else { *next };
     let lng_plus = lng + 360f64;
-    let ref_lng = if next < deg && next > 0 && lng_plus < end && min_index === next_index { lng_plus } else { lng };
-    return ref_lng > deg && ref_lng <= end;
+    let ref_lng = if next < deg && next > &0f64 && lng_plus < end && min_index == next_index { lng_plus } else { lng };
+    index += 1;
+    ref_lng > *deg && ref_lng <= end
   });
-  matchedIndex + 1
-};
-
-pub fn map_sign_to_house(sign: f64, houses: Vec<f64>) -> f64 {
-  let num_houses = houses.len();
-  let mut hn = 0;
-  if (num_houses > 0) {
-    let diff = houses[0] / 30f64;
-    let hnr = (sign - diff) % num_houses as f64;
-    hn = if hnr < 1  { hnr + num_houses } else { hnr };
+  if let Some(m_index) = matched_index {
+    m_index as u8 + 1u8
+  } else {
+    1u8
   }
-  return hn;
-};
+}
+
+pub fn map_sign_to_house(sign: u8, houses: Vec<f64>) -> u8 {
+  let lng = (sign  * 30) as f64;
+  match_house_num(lng, houses)
+}
 
 pub fn limit_value_to_range(num: f64, min: f64, max: f64) -> f64 {
   let span = max - min;
   let val = (num - min) % span;
-  let ref_val = val > 0 ? val : span + val;
+  let ref_val = if val > 0f64 { val } else { span + val };
   let out_val = ref_val + min;
-  if (min < 0 && (val < 0 || num > max)) { 0 - out_val } else { out_val };
+  if min < 0f64 && (val < 0f64 || num > max) { 0f64 - out_val } else { out_val }
 }
 
-pub fn calc_varga_value(lng: f64, num = 1) -> f64 {
+pub fn calc_varga_value(lng: f64, num: u16) -> f64 {
   (lng * num as f64) % 360f64
 }
 
-pub fn subtract_360(lng: f64, offset = 0) -> f64 {
-  (lng + 360 as f64 - offset as f64) % 360f64
+pub fn subtract_360(lng: f64, offset: f64) -> f64 {
+  (lng + 360f64 - offset) % 360f64
 }
 
-pub fn calc_all_vargas(lng: f64) -> {
-  return VARGA_VALUES.map(|v| {
+pub fn calc_all_vargas(lng: f64) -> Vec<NumValue> {
+  all_varga_items().into_iter().map(|v| {
     let value = calc_varga_value(lng, v.num);
-    return { num: v.num, value };
-  });
+    NumValue::new(v.num, value)
+  }).collect()
 }
 
-pub fn calc_varga_set(lng: f64, num = u8, key: &str) -> {
+pub fn calc_varga_set(lng: f64, num: u16, key: &str) -> NumValueKeySet {
   let values = calc_all_vargas(lng);
-  return {
-    num,
-    key,
-    values,
-  };
+  NumValueKeySet::new(num, key, values)
 }
 
 pub fn calc_inclusive_distance(
@@ -71,14 +70,14 @@ pub fn calc_inclusive_twelfths(pos_1: u16, pos_2: u16) -> u16 {
   
 
 pub fn calc_inclusive_sign_positions(sign1: u8, sign2: u8) -> u8 {
-  calc_inclusive_twelfths(sign2 as u16, sign1 as u16, 12) as u8
+  calc_inclusive_twelfths(sign2 as u16, sign1 as u16) as u8
 }
 
 pub fn calc_inclusive_nakshatras(pos_1: u8, pos_2: u8) -> u8 {
-  calc_inclusive_twelfths(sign2 as u16, sign1 as u16, 27) as u8
+  calc_inclusive_twelfths(pos_1 as u16, pos_2 as u16) as u8
 }
 
-pub fn mid_point_to_surface(coord1: GeoPos, coord2: GeoPos) -> GeoPos {
+/* pub fn mid_point_to_surface(coord1: GeoPos, coord2: GeoPos) -> GeoPos {
   let c1 = geo_to_radians(coord1);
   let c2 = geo_to_radians(coord2);
   let bx = Math.cos(c2.lat) * Math.cos(c2.lng - c1.lng);
@@ -90,39 +89,37 @@ pub fn mid_point_to_surface(coord1: GeoPos, coord2: GeoPos) -> GeoPos {
   let mid_lng = c1.lng + Math.atan2(by, Math.cos(c1.lat) + bx);
   let mid_alt = (c1.alt + c2.alt) / 2f64;
   GeoPos::new( to_degrees(mid_lat), lng: to_degrees(mid_lng), mid_alt)
-}
+} */
 
 pub fn to_360(lng: f64) -> f64 {
-  if lng >= 0f64 { lng + 180f64 }  else { 180f64 - lng };
+  if lng >= 0f64 { lng + 180f64 }  else { 180f64 - lng }
 }
 
 pub fn from_360(lng: f64) -> f64 {
-  if lng > 180f64 { lng - 180 } else { 0 - (180 - lng) };
+  if lng > 180f64 { lng - 180f64 } else { 0f64 - (180f64 - lng) }
 }
 
 pub fn median_lat(v1: f64, v2: f64) -> f64 {
   let offset = 90f64;
   return (v1 + offset + (v2 + offset)) / 2f64 - offset;
-};
+}
 
-pub fn median_lng(v1: f64, v2: f64) -> LngLat {
-  let offset = 180;
-  let direction = v1;
-  let full_circle = offset * 2;
-  let lngs = [to_360(v2), to_360(v1)];
-  lngs.sort();
-  const [d1, d2] = lngs;
-  let reverse = Math.abs(d2 - d1) > offset;
-  let is_west = reverse ? v1 + v2 > 0 : v1 + v2 < 0;
-  let res360 = ((d1 + d2) % full_circle) / 2;
+pub fn median_lng(v1: f64, v2: f64) -> f64 {
+  let offset = 180f64;
+  let full_circle = offset * 2f64;
+  let d1 = to_360(v1);
+  let d2 = to_360(v2);
+  let reverse = (d2 - d1).abs() > offset;
+  let is_west = if reverse { v1 + v2 > 0f64 } else { v1 + v2 < 0f64 };
+  let res360 = ((d1 + d2) % full_circle) / 2f64;
   let res_a = from_360(res360) % offset;
-  let res1 = if is_west { res_a } : { 0 - res_a };
+  let res1 = if is_west { res_a } else { 0f64 - res_a };
   let res_b = offset - res1;
   let res2a = if is_west  { full_circle - res_b } else { res_b };
-  let res2 = if is_west && res2a > 0  { 0 - res2a } else { res2a };
+  let res2 = if is_west && res2a > 0f64  { 0f64 - res2a } else { res2a };
   let res2_is_between = to_360(res2) > d1 && to_360(res2) <= d2;
   let result = if reverse || res2_is_between  { res2 } else { res1 };
-  return result;
+  result
 }
 
 pub fn median_lat_lng(coord1: GeoPos, coord2: GeoPos) -> LngLat {
