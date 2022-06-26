@@ -183,7 +183,7 @@ pub fn calc_transition_sun(jd: f64, geo: GeoPos) -> ExtendedTransitionSet {
   calc_transition_set_extended(jd, Bodies::Sun, geo.lat, geo.lng)
 }
 
-pub fn calc_transitions_sun(jd: f64, days: i32, geo: GeoPos) -> Vec<KeyNumValue> {
+pub fn calc_transitions_sun(jd: f64, days: u16, geo: GeoPos) -> Vec<KeyNumValue> {
   let mut sets: Vec<KeyNumValue> = Vec::new();
   for i in 0..days {
     let ref_jd = jd + i as f64;

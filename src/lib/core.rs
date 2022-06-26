@@ -101,16 +101,29 @@ pub fn calc_body_positions_jd_geo(jd_start: f64, key: &str, days: i32, num_per_d
 /*
  Get set of tropical geocentric coordinates for groups of celestial bodies
 */
-pub fn calc_bodies_positions_jd_geo(jd_start: f64, keys: Vec<&str>, days: i32, num_per_day: f64) -> Vec<GrahaPosSet> {
+pub fn calc_bodies_positions_jd(jd_start: f64, keys: Vec<&str>, days: u16, num_per_day: f64, geo: Option<GeoPos>, eq: bool) -> Vec<GrahaPosSet> {
   let mut items: Vec<GrahaPosSet> = Vec::new();
   let max_f64 = floor(days as f64 * num_per_day, 0);
   let max = max_f64 as i32;
   let increment = 1f64 / num_per_day;
+  let topo = match geo {
+    None => false,
+    _ => true,
+  };
   for i in 0..max {
     let curr_jd = jd_start + (i as f64 * increment);
     let mut bodies: Vec<GrahaPos> = Vec::new();
     for key in &keys {
-      let graha_pos = calc_body_jd_geo(curr_jd, key);
+      let graha_pos = match eq {
+        true => match topo {
+          true => calc_body_eq_jd_topo(curr_jd, key, geo.unwrap()),
+          _ => calc_body_eq_jd(curr_jd, key, false),
+        },
+        _ => match topo {
+          true => calc_body_jd_topo(curr_jd, key, geo.unwrap()),
+          _ => calc_body_jd_geo(curr_jd, key),
+        }
+      };
       bodies.push(graha_pos);
     }
     items.push(GrahaPosSet::new(curr_jd, bodies));

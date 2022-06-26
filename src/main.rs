@@ -26,7 +26,8 @@ use std::path::Path;
 use std::collections::{HashMap};
 use lib::julian_date::{current_datetime_string, current_year};
 
-const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
+const SWEPH_PATH_DEFAULT: &str = "/Users/neil/apps/findingyou/findingyou-api/src/astrologic/ephe";
+//const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
 const DEFAULT_PORT: u32 = 8087;
 /// Astrologic engine config
 #[derive(Parser, Debug)]
@@ -57,6 +58,8 @@ struct InputOptions {
   topo: Option<u8>, // 0 = geocentric, 1 topocentric, 2 both, default 0
   eq: Option<u8>, // 0 = ecliptic, 1 equatorial, 2 both default 0
   days: Option<u16>, // duration in days where applicable
+  pd: Option<u8>, // number per day, 2 => every 12 hours
+  dspan: Option<u8>, // number per days per calculation
   years: Option<u16>, // duration in years where applicable
   loc: Option<String>, // comma-separated lat,lng(,alt) numeric string
   loc2: Option<String>, // comma-separated lat,lng(,alt) numeric string
@@ -92,16 +95,28 @@ impl PositionInfo {
   }
 }
 
-#[get("/progress/{dateref}/{loc}")]
-async fn bodies_progress(req: HttpRequest) -> impl Responder {
-  let dateref: String = req.match_info().get("dateref").unwrap().parse().unwrap();
-  let loc: String = req.match_info().query("loc").parse().unwrap();
-  let keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ur", "ne", "pl", "ke"];
-  let info = DateInfo::new(dateref.to_string().as_str());
-  let parts: Vec<f64> = loc.split(",").into_iter().map(|p| p.parse::<f64>().unwrap()).collect();
-  let geo = GeoPos::new(parts[0], parts[1], 0f64);
-  let data = calc_bodies_positions_jd_geo(info.jd, keys, 30, 2f64);
-  web::Json(json!(PositionInfo::new(info, geo, data)))
+#[get("/progress")]
+async fn bodies_progress(params: web::Query<InputOptions>) -> impl Responder {
+  let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+  let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
+  let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
+  let def_keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ur", "ne", "pl", "ke"];
+  let key_string: String = params.bodies.clone().unwrap_or("".to_string());
+  let topo: bool = params.topo.clone().unwrap_or(0) > 0;
+  let eq: bool = params.eq.clone().unwrap_or(0)  > 0; // 0 ecliptic, 1 equatorial, 2 both
+  let days: u16 = params.days.unwrap_or(28);
+  let per_day = params.pd.clone().unwrap_or(0);
+  let day_span = params.dspan.clone().unwrap_or(0);
+  let per_day_f64 = if per_day > 0 && per_day < 24 { per_day as f64 } else if day_span > 0 && (day_span as u16) < days { 1f64 / day_span as f64 } else { 2f64 };
+  let num_cycles = days * per_day_f64 as u16; 
+  let days_spanned = if num_cycles > 1000 { (1000f64 / per_day_f64) as u16 } else { days };
+  let micro_interval = time::Duration::from_millis(20 + (num_cycles / 4) as u64);
+  let keys = body_keys_str_to_keys_or(key_string, def_keys);
+  let date = DateInfo::new(dateref.to_string().as_str());
+  let geo_opt = if topo { Some(geo) } else { None };
+  let data = calc_bodies_positions_jd(date.jd, to_str_refs(&keys), days_spanned, per_day_f64, geo_opt, eq);
+  thread::sleep(micro_interval);
+  web::Json(json!(PositionInfo::new(date, geo, data)))
 }
 
 #[get("/positions")]
@@ -109,9 +124,9 @@ async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
   let micro_interval = time::Duration::from_millis(20);
   let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
+  let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
   let aya: String = params.aya.clone().unwrap_or("true_citra".to_string());
   let sidereal: bool = params.sid.unwrap_or(0) > 0;
-  let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
   let topo: u8 = params.topo.clone().unwrap_or(0);
   let eq: u8 = params.eq.clone().unwrap_or(2); // 0 ecliptic, 1 equatorial, 2 both
   let info = DateInfo::new(dateref.to_string().as_str());
@@ -143,22 +158,22 @@ async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
   web::Json(json!({ "valid": valid, "date": info, "geo": geo, "longitudes": longitudes, "ayanamsha": { "key": aya, "value": ayanamsha, "applied": sidereal }, "coordinateSystem": coord_system, "sunTransitions": sun_transitions, "moonTransitions": moon_transitions }))
 }
 
-#[get("/sun-transitions/{dateref}/{loc}/{num_days}")]
-async fn list_sun_transitions(req: HttpRequest) -> impl Responder {
-  let dateref: String = req.match_info().get("dateref").unwrap().parse().unwrap();
-  let loc: String = req.match_info().query("loc").parse().unwrap();
-  let days_ref: String = req.match_info().query("num_days").parse().unwrap();
-  let days = if is_integer_str(days_ref.as_str()) { days_ref.parse::<i32>().unwrap() } else { 31i32 };
+#[get("/sun-transitions")]
+async fn list_sun_transitions(params: web::Query<InputOptions>) -> impl Responder {
+  let micro_interval = time::Duration::from_millis(30);  
+  let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
+  let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+  let days: u16 = params.days.unwrap_or(28);
   let info = DateInfo::new(dateref.to_string().as_str());
-  
   let sun_transitions = calc_transitions_sun(info.jd, days, geo);
   let valid = sun_transitions.len() > 0;
+  thread::sleep(micro_interval);
   web::Json(json!({ "valid": valid, "date": info, "geo": geo, "sunTransitions": sun_transitions }))
 }
 
 #[get("/transitions")]
-async fn list_transitions(req: HttpRequest, params: web::Query<InputOptions>) -> impl Responder {
+async fn list_transitions(params: web::Query<InputOptions>) -> impl Responder {
   let micro_interval = time::Duration::from_millis(30);
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
