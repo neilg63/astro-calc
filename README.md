@@ -13,7 +13,15 @@ The main.rs file acts as the API controller for all astronomical and astrologica
 
 The project is evolving into an open-source API server, using ActixWeb, with a rich set of astronomical and astrological features that may be used by other custom services in creative ways.
 
-# Endpoints
+## Build instructions:
+You may use `cargo build` to build an executable for your operating system (all versions of Linux, Mac or Windows supported by Rust 1.61). However, you will have to configure the Swiss Ephemeris data library. This may already be available if you have installed other versions of Swiss Ephemeris. On Linux libswe is installed at `/usr/share/libswe/ephe`. However, the source files can be downloaded from [www.astro.com/ftp/swisseph/](https://www.astro.com/ftp/swisseph/).
+
+## Commad line parameters
+
+* -e: ephemeris path
+* -p: port number
+
+## Endpoints
 
 GET /jd/:datetef
 
