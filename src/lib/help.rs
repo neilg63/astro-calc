@@ -11,10 +11,10 @@ fn info_map(pairs: Vec<(&str, &str)>) -> HashMap<String, String> {
 pub fn endpoint_help() -> HashMap<String, HashMap<String,String>> {
   let mut help: HashMap<String, HashMap<String, String>> = HashMap::new();
 
-  help.insert("/jd/{datetef}".to_string(), info_map(
+  help.insert("/jd/:datetef".to_string(), info_map(
     vec![( 
       "description", "Julian day, unix time stamp and UTC date-time string"),
-      ("{dateref}", "either ISO date string with optional time or julian day"),
+      (":dateref", "either ISO date string with optional time or julian day"),
     ]
   ));
   
