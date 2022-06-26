@@ -23,25 +23,6 @@ pub struct VariantSet {
  * Used for celestial objects
  */
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
-pub struct LngLat {
-  lng: f64,
-  lat: f64,
-}
-
-impl LngLat {
-  pub fn new(lng: f64, lat: f64) -> LngLat {
-    LngLat { lng, lat }
-  }
-  pub fn empty() -> LngLat {
-    LngLat { lng: -1f64, lat: -1f64 }
-  }
-}
-
-/**
- * Used for celestial objects
- */
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HouseSystem {
   system: char,

@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use super::{chart::{LngLat}};
+use super::{general::{LngLat, ToLngLat, LngLatKey, ToLngLatKey}};
 use super::super::{julian_date::*, traits::*};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -17,6 +17,25 @@ pub struct BodyPos {
 impl BodyPos {
   pub fn new(key: &str, mode: &str, lng: f64, lat: f64, lng_speed: f64, lat_speed: f64) -> Self {
     BodyPos { key: key.to_string(), mode: mode.to_string(), lng: lng, lat: lat, lng_speed: lng_speed, lat_speed: lat_speed }
+  }
+}
+
+impl ToLngLat for BodyPos {
+  fn to_lng_lat(&self) -> LngLat {
+    LngLat {
+      lng: self.lng,
+      lat: self.lat,
+    }
+  }
+}
+
+impl ToLngLatKey for BodyPos {
+  fn to_lng_lat_key(&self) -> LngLatKey {
+    LngLatKey {
+      key: self.key.clone(),
+      lng: self.lng,
+      lat: self.lat,
+    }
   }
 }
 
@@ -113,6 +132,27 @@ impl GrahaPos {
 
 }
 
+
+impl ToLngLat for GrahaPos {
+  fn to_lng_lat(&self) -> LngLat {
+    LngLat {
+      lng: self.lng,
+      lat: self.lat,
+    }
+  }
+}
+
+impl ToLngLatKey for GrahaPos {
+  fn to_lng_lat_key(&self) -> LngLatKey {
+    LngLatKey {
+      key: self.key.clone(),
+      lng: self.lng,
+      lat: self.lat,
+    }
+  }
+}
+
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GrahaPosItem {
   pub jd: f64,
@@ -153,8 +193,11 @@ impl ToISODateString for GrahaPosSet {
 
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
 pub enum FlexiBodyPos {
-  LngLat(LngLat),
-  Simple(BodyPos),
-  Extended(GrahaPos),
+  LngLat(Vec<LngLat>),
+  LngLatKey(Vec<LngLatKey>),
+  Simple(Vec<BodyPos>),
+  Extended(Vec<GrahaPos>),
 }

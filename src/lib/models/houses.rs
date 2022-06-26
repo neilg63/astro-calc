@@ -95,8 +95,18 @@ pub fn get_house_data(jd: f64, lat: f64, lng: f64, system: char) -> HouseData {
   HouseData::new(jd, lat, lng, system)
 }
 
+pub fn houses_system_chars() -> Vec<char> {
+  vec!['W','E','O','P','K','B','C','M','R','T','A','X','G','H']
+}
+
+pub fn match_house_systems_chars(ref_str: String) -> Vec<char> {
+  let ref_chars: Vec<char> = ref_str.split(",").filter(|s| s.len() > 0).map(|c| c.to_uppercase().chars().nth(0).unwrap()).collect();
+  let all_chars = houses_system_chars();
+  ref_chars.iter().filter(|c| all_chars.contains(c)).map(|c| *c).collect::<Vec<char>>()
+}
+
 pub fn get_house_systems(jd: f64, geo: GeoPos, keys: Vec<char>) -> HouseSetData {
-  let house_systems:Vec<char> = vec!['W','E','O','P','K','B','C','M','R','T','A','X','G','H'];
+  let house_systems:Vec<char> = houses_system_chars();
   let match_all = keys.len() == 1 && keys[0] == 'a';
   let match_whole_only = keys.len() == 1 && keys[0] == 'W' || keys.len() < 1;
   let matched_keys = if match_whole_only { vec!['W'] } else { keys };

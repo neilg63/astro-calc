@@ -1,7 +1,7 @@
 use math::round::{floor};
 use libswe_sys::sweconst::{Bodies, OptionalFlag};
 use libswe_sys::swerust::{handler_swe03::*};
-use super::{settings::{ayanamshas::*},traits::*, math_funcs::{calc_progress_day_jds_by_year}, julian_date::{julian_day_to_iso_datetime}};
+use super::{settings::{ayanamshas::*},traits::*, math_funcs::{calc_progress_day_jds_by_year}, math_funcs::{subtract_360}};
 use super::models::{graha_pos::*, geo_pos::*, general::*, houses::{calc_ascendant}};
 use super::super::extensions::swe::{azalt, set_topo, set_sid_mode, get_ayanamsha};
 use std::collections::{HashMap};
@@ -164,6 +164,24 @@ pub fn get_bodies_ecl_geo(jd: f64, keys: Vec<&str>) -> Vec<GrahaPos> {
   bodies
 }
 
+pub fn get_bodies_eq_geo(jd: f64, keys: Vec<&str>) -> Vec<GrahaPos> {
+  let mut bodies: Vec<GrahaPos> = Vec::new();
+  for key in keys {
+    let result = calc_body_eq_jd(jd, key, false);
+    bodies.push(result);
+  }
+  bodies
+}
+
+pub fn get_bodies_eq_topo(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<GrahaPos> {
+  let mut bodies: Vec<GrahaPos> = Vec::new();
+  for key in keys {
+    let result = calc_body_eq_jd_topo(jd, key, geo);
+    bodies.push(result);
+  }
+  bodies
+}
+
 pub fn get_bodies_ecl_topo(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<GrahaPos> {
   let mut bodies: Vec<GrahaPos> = Vec::new();
   for key in keys {
@@ -189,27 +207,42 @@ pub fn get_bodies_p2(jd: f64, keys: Vec<String>, start_year: u32, num_years: u16
   items
 }
 
-pub fn get_body_longitudes(jd: f64, geo: GeoPos, mode: &str) -> HashMap<String, f64> {
+pub fn get_body_longitudes(jd: f64, geo: GeoPos, mode: &str, equatorial: bool, aya_offset: f64) -> HashMap<String, f64> {
   let mut items: HashMap<String, f64> = HashMap::new();
   let keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ur", "ne", "pl", "ke"];
-  let bodies = match mode {
-    "topo" => get_bodies_ecl_topo(jd, keys, geo),
-    _ => get_bodies_ecl_geo(jd, keys),
+  let bodies = match equatorial {
+    true => match mode {
+      "topo" => get_bodies_eq_topo(jd, keys, geo),
+      _ => get_bodies_eq_geo(jd, keys),
+    },
+    _ => match mode {
+      "topo" => get_bodies_ecl_topo(jd, keys, geo),
+      _ => get_bodies_ecl_geo(jd, keys),
+    }
   };
-  items.insert("as".to_string(), calc_ascendant(jd, geo));
+  items.insert("as".to_string(), subtract_360(calc_ascendant(jd, geo), aya_offset));
   for body in bodies {
-    items.insert(body.key, body.lng);
+    let lng = if equatorial { body.rect_ascension } else { body.lng };
+    items.insert(body.key, subtract_360(lng, aya_offset));
   }
   items
 }
 
 
-pub fn get_body_longitudes_geo(jd: f64, geo: GeoPos) -> HashMap<String, f64> {
-  get_body_longitudes(jd, geo, "geo")
+pub fn get_body_longitudes_geo(jd: f64, geo: GeoPos, aya_offset: f64) -> HashMap<String, f64> {
+  get_body_longitudes(jd, geo, "geo", false, aya_offset)
 }
 
-pub fn get_body_longitudes_topo(jd: f64, geo: GeoPos) -> HashMap<String, f64> {
-  get_body_longitudes(jd, geo, "topo")
+pub fn get_body_longitudes_topo(jd: f64, geo: GeoPos, aya_offset: f64) -> HashMap<String, f64> {
+  get_body_longitudes(jd, geo, "topo", false, aya_offset)
+}
+
+pub fn get_body_longitudes_eq_geo(jd: f64, geo: GeoPos, aya_offset: f64) -> HashMap<String, f64> {
+  get_body_longitudes(jd, geo, "geo", true, aya_offset)
+}
+
+pub fn get_body_longitudes_eq_topo(jd: f64, geo: GeoPos, aya_offset: f64) -> HashMap<String, f64> {
+  get_body_longitudes(jd, geo, "topo", true, aya_offset)
 }
 
 pub fn get_bodies_dual_topo(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<GrahaPos> {

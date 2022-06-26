@@ -74,3 +74,43 @@ impl ProgressItemSet {
     ProgressItemSet { pd, jd, bodies, ayanamsha }
   }
 }
+
+/**
+ * Used for celestial objects
+ */
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+pub struct LngLat {
+  pub lng: f64,
+  pub lat: f64,
+}
+
+impl LngLat {
+  pub fn new(lng: f64, lat: f64) -> LngLat {
+    LngLat { lng, lat }
+  }
+  pub fn empty() -> LngLat {
+    LngLat { lng: -1f64, lat: -1f64 }
+  }
+}
+
+pub trait ToLngLat {
+  fn to_lng_lat(&self) -> LngLat;
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct LngLatKey {
+  pub lng: f64,
+  pub lat: f64,
+  pub key: String,
+}
+
+impl LngLatKey {
+  pub fn new(key: &str, lng: f64, lat: f64) -> LngLatKey {
+    LngLatKey { key: key.to_string(), lng, lat }
+  }
+}
+
+pub trait ToLngLatKey {
+  fn to_lng_lat_key(&self) -> LngLatKey;
+}

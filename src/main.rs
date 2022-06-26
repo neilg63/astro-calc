@@ -1,6 +1,7 @@
 mod lib;
 mod extensions;
 
+extern crate libc;
 extern crate serde_derive;
 extern crate serde_json;
 extern crate libswe_sys;
@@ -10,14 +11,14 @@ extern crate chrono;
 use libswe_sys::sweconst::{
     Bodies, Calandar, OptionalFlag,
 }; */
+use std::{thread, time};
 use libswe_sys::swerust::{
     handler_swe02::*,
 };
 use serde::{Serialize, Deserialize};
 use serde_json::*;
 use clap::Parser;
-use lib::{transposed_transitions::*, transitions::*};
-use lib::{core::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*, general::*}, utils::{validators::*, converters::*}};
+use lib::{core::*, transposed_transitions::*, transitions::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*, general::*}, utils::{validators::*, converters::*}, help::*};
 use extensions::swe::{set_sid_mode};
 use std::sync::Mutex;
 use actix_web::{get, App, HttpServer, Responder, HttpRequest, web::{self, Data}};
@@ -25,7 +26,8 @@ use std::path::Path;
 use std::collections::{HashMap};
 use lib::julian_date::{current_datetime_string, current_year};
 
-const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
+const SWEPH_PATH_DEFAULT: &str = "/Users/neil/apps/findingyou/findingyou-api/src/astrologic/ephe";
+//const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
 const DEFAULT_PORT: u32 = 8087;
 /// Astrologic engine config
 #[derive(Parser, Debug)]
@@ -66,7 +68,9 @@ struct InputOptions {
   p2yrs: Option<u8>, // num years for p2
   p2py: Option<u8>, // num per year
   aya: Option<String>, // ayanamshas
-  sid: Option<String>, // apply referenced sidereal type (ayanamsha) to all longitudes
+  amode: Option<String>, // apply referenced sidereal type (ayanamsha) to all longitudes
+  sid: Option<u8>, // 0 tropical longitudes, 1 sidereal longitudes
+  hsys: Option<String>, // comma-separated list of letters representing house systems to be returned. Defaults to W for whole house system
 }
 
 #[get("/jd/{dateref}")]
@@ -101,17 +105,43 @@ async fn bodies_progress(req: HttpRequest) -> impl Responder {
   web::Json(json!(PositionInfo::new(info, geo, data)))
 }
 
-#[get("/positions/{dateref}/{loc}")]
-async fn body_positions(req: HttpRequest) -> impl Responder {
-  let dateref: String = req.match_info().get("dateref").unwrap().parse().unwrap();
-  let loc: String = req.match_info().query("loc").parse().unwrap();
+#[get("/positions")]
+async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
+  let micro_interval = time::Duration::from_millis(20);
+  let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+  let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
+  let aya: String = params.aya.clone().unwrap_or("true_citra".to_string());
+  let sidereal: bool = params.sid.unwrap_or(0) > 0;
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
+  let topo: u8 = params.topo.clone().unwrap_or(0);
+  let eq: u8 = params.eq.clone().unwrap_or(2); // 0 ecliptic, 1 equatorial, 2 both
   let info = DateInfo::new(dateref.to_string().as_str());
-  let longitudes = get_body_longitudes_geo(info.jd, geo);
+  let ayanamsha = get_ayanamsha_value(info.jd, aya.as_str());
+  let aya_offset = if sidereal { ayanamsha } else { 0f64 };
+  let longitudes = match eq {
+    1 => match topo { 
+      1 => get_body_longitudes_eq_topo(info.jd, geo, aya_offset),
+      _ => get_body_longitudes_eq_geo(info.jd, geo, aya_offset)
+    },
+    _ => match topo { 
+      1 => get_body_longitudes_topo(info.jd, geo, aya_offset),
+      _ => get_body_longitudes_geo(info.jd, geo, aya_offset)
+    }
+  };
   let valid = longitudes.len() > 0;
-  let ayanamsha = get_ayanamsha_value(info.jd, "true_citra");
   let sun_transitions = calc_transition_sun(info.jd, geo);
-  web::Json(json!({ "valid": valid, "date": info, "geo": geo, "longitudes": longitudes, "true_citra": ayanamsha, "sunTransitions": sun_transitions }))
+  let moon_transitions = calc_transition_moon(info.jd, geo);
+  let eq_label = match eq {
+    1 => "equatorial",
+    _ => "ecliptic",
+  };
+  let topo_label = match topo {
+    1 => "topocentric",
+    _ => "geocentric",
+  };
+  let coord_system = format!("{}/{}", eq_label, topo_label );
+  thread::sleep(micro_interval);
+  web::Json(json!({ "valid": valid, "date": info, "geo": geo, "longitudes": longitudes, "ayanamsha": { "key": aya, "value": ayanamsha, "applied": sidereal }, "coordinateSystem": coord_system, "sunTransitions": sun_transitions, "moonTransitions": moon_transitions }))
 }
 
 #[get("/sun-transitions/{dateref}/{loc}/{num_days}")]
@@ -130,6 +160,7 @@ async fn list_sun_transitions(req: HttpRequest) -> impl Responder {
 
 #[get("/transitions")]
 async fn list_transitions(req: HttpRequest, params: web::Query<InputOptions>) -> impl Responder {
+  let micro_interval = time::Duration::from_millis(30);
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
   let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
@@ -141,11 +172,13 @@ async fn list_transitions(req: HttpRequest, params: web::Query<InputOptions>) ->
   let num_days = if days_int >= 1 { days_int } else { 1u16 };
   let transition_sets = get_transition_sets_extended(info.jd, keys, geo, num_days);
   let valid = transition_sets.len() > 0;
+  thread::sleep(micro_interval);
   web::Json(json!({ "valid": valid, "date": info, "geo": geo, "transitionSets": transition_sets }))
 }
 
 #[get("/chart-data")]
 async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responder {
+  let micro_interval = time::Duration::from_millis(50);
   let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
@@ -156,8 +189,12 @@ async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responder {
     "core" => vec!["true_citra", "lahiri"],
     _ => aya.split(",").collect(),
   };
+  let hsys_str = params.hsys.clone().unwrap_or("W".to_string());
+  let match_all_houses = hsys_str.to_lowercase().as_str() == "all";
+  let h_systems: Vec<char> = if match_all_houses { vec![] } else { match_house_systems_chars(hsys_str) };
   let show_p2: bool = params.p2.clone().unwrap_or(0) > 0;
   let topo: u8 = params.topo.clone().unwrap_or(0);
+  let eq: u8 = params.eq.clone().unwrap_or(2); // 0 ecliptic, 1 equatorial, 2 both
   let p2_ago: u8 = params.p2ago.clone().unwrap_or(1);
   let p2_start_year = current_year() as u32 - p2_ago as u32;
   let p2_years: u8 = params.p2yrs.clone().unwrap_or(3);
@@ -167,11 +204,23 @@ async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responder {
   let keys = body_keys_str_to_keys_or(key_string, def_keys);
   let date = DateInfo::new(dateref.to_string().as_str());
   let data = match topo {
-    1 => get_bodies_dual_topo(date.jd, to_str_refs(&keys), geo),
-    _ => get_bodies_dual_geo(date.jd, to_str_refs(&keys)),
+    1 => match eq {
+      0 => get_bodies_ecl_topo(date.jd, to_str_refs(&keys), geo),
+      1 => get_bodies_eq_topo(date.jd, to_str_refs(&keys), geo),
+      _ => get_bodies_dual_topo(date.jd, to_str_refs(&keys), geo),
+    }
+    _ => match eq {
+      0 => get_bodies_ecl_geo(date.jd, to_str_refs(&keys)),
+      1 => get_bodies_eq_geo(date.jd, to_str_refs(&keys)),
+      _ => get_bodies_dual_geo(date.jd, to_str_refs(&keys)),
+    }
   };
+  let mut topo_items: Vec<LngLatKey> = Vec::new();
+  if topo == 2 {
+    topo_items = get_bodies_ecl_topo(date.jd, to_str_refs(&keys), geo).into_iter().map(|b| b.to_lng_lat_key()).collect();
+  }
   let valid = data.len() > 0;
-  let house_data = get_all_house_systems(date.jd, geo);
+  let house_data = if match_all_houses { get_all_house_systems(date.jd, geo) } else { get_house_systems(date.jd, geo, h_systems) } ;
   let ayanamshas = match aya.as_str() {
     "all" => get_all_ayanamsha_values(date.jd),
     _ => get_ayanamsha_values(date.jd, aya_keys),
@@ -181,7 +230,13 @@ async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responder {
   
   let p2: Vec<ProgressItemSet> = if show_p2 { get_bodies_p2(date.jd, keys.clone(), p2_start_year, p2_years as u16, p2_per_year) } else { Vec::new() };
 
-  web::Json(json!({ "valid": valid, "date": date, "geo": geo, "bodies": data, "house": house_data, "ayanamshas": ayanamshas, "transitions": transitions, "progressItems": p2 }))
+  let bodies: FlexiBodyPos = match eq {
+    0 => FlexiBodyPos::Simple(data.iter().map(|b| b.to_body("ecl")).collect()),
+    1 => FlexiBodyPos::Simple(data.iter().map(|b| b.to_body("eq")).collect()),
+    _=> FlexiBodyPos::Extended(data),
+  };
+  thread::sleep(micro_interval);
+  web::Json(json!({ "valid": valid, "date": date, "geo": geo, "bodies": bodies, "topoVariants": topo_items, "house": house_data, "ayanamshas": ayanamshas, "transitions": transitions, "progressItems": p2 }))
 }
 
 #[get("/pheno/{body}/{dateref}")]
@@ -196,6 +251,7 @@ async fn pheno_data(req: HttpRequest) -> impl Responder {
 
 #[get("/transposed-transitions")]
 async fn body_transposed_transitions_range(params: web::Query<InputOptions>) -> impl Responder {
+  let micro_interval = time::Duration::from_millis(50);
   let dateref: String = params.dt2.clone().unwrap_or(current_datetime_string());
   let loc: String = params.loc2.clone().unwrap_or("0,0".to_string());
   let historic_geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
@@ -214,6 +270,7 @@ async fn body_transposed_transitions_range(params: web::Query<InputOptions>) -> 
   let valid = transitions.len() > 0;
   
   let current_transitions:  Vec<KeyNumValueSet> = if show_transitions { get_transition_sets_extended(current_dt.jd, keys, current_geo, num_days) } else { Vec::new() };
+  thread::sleep(micro_interval);
   web::Json(json!({ "valid": valid, "date": current_dt, "geo": current_geo, "historicDate": historic_dt, "historicGeo": historic_geo, "days": num_days, "transposedTransitions": transitions, "currentTransitions": current_transitions }))
 }
 
@@ -238,7 +295,7 @@ fn key_num_values_to_map(items: Vec<KeyNumValue>) -> HashMap<String, f64> {
 }
 
 async fn welcome() -> impl Responder {
-  web::Json( json!({ "message": "Welcome to Astro API", "time": DateInfo::now(), "routes": ["positions", "chart-data", "transitions", "transposed-transitions"] }))
+  web::Json(json!({ "message": "Welcome to Astro API", "time": DateInfo::now(), "routes": endpoint_help() }))
 }
 
 async fn welcome_not_configured() -> impl Responder {

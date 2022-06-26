@@ -1,4 +1,6 @@
 use std::os::raw::{c_char, c_double, c_int};
+//use std::boxed::{Box};
+//use std::{thread, time};
 use serde::{Serialize, Deserialize};
 use libswe_sys::sweconst::{Bodies};
 use super::super::lib::settings::ayanamshas::*;
@@ -72,34 +74,48 @@ extern "C" {
 
 }
 
+/**
+ * May trigger freeing of unallocated memory
+ * Call via sleep
+ */
 pub fn rise_trans_raw(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, iflag: i32) -> [f64; 3] {
-  //let mut xx: [f64; 6] = [0.0; 6];
   let mut serr = [0; 255];
   let geopos = &mut [lng, lat, 0f64];
   let star_ref = &mut [];
   let result = unsafe {
-      let p_xx = &mut [0f64, 0f64, 0f64];
-      let p_serr = serr.as_mut_ptr();
-      swe_rise_trans(
-          tjd_ut,
-          ipl as i32,
-          star_ref,
-          0,
-          iflag,
-          geopos,
-          0f64,
-          0f64,
-          p_xx,
-          p_serr,
-      );
-      *p_xx
+    let p_xx: &mut [f64; 3] = &mut [0f64, 0f64, 0f64];
+    std::ptr::drop_in_place(p_xx);
+    //let bx = Box::new(*p_xx);
+    let p_serr = serr.as_mut_ptr();
+    swe_rise_trans(
+        tjd_ut,
+        ipl as i32,
+        star_ref,
+        0,
+        iflag,
+        geopos,
+        0f64,
+        0f64,
+        p_xx,
+        p_serr,
+    );
+    *p_xx
   };
-  result
+  result.to_owned()
+}
+
+/* pub fn rise_trans_value(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, iflag: i32) -> f64 {
+  rise_trans_raw(tjd_ut, ipl, lat, lng, iflag)[0]
 }
 
 pub fn rise_trans(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, iflag: i32) -> f64 {
-  let result = rise_trans_raw(tjd_ut, ipl, lat, lng, iflag);
-  return result[0];
+  let ten_millis = time::Duration::from_millis(10);
+  thread::sleep(ten_millis);
+  rise_trans_value(tjd_ut, ipl, lat, lng, iflag)
+} */
+
+pub fn rise_trans(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, iflag: i32) -> f64 {
+  rise_trans_raw(tjd_ut, ipl, lat, lng, iflag)[0]
 }
 
 /*

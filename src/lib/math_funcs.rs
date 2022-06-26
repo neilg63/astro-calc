@@ -1,4 +1,4 @@
-use super::models::{general::*, geo_pos::*, chart::{LngLat}};
+use super::models::{general::*, geo_pos::*, general::{LngLat}};
 use super::settings::varga_values::*;
 use super::utils::minmax::*;
 use super::julian_date::datetime_to_julian_day;
