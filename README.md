@@ -29,7 +29,7 @@ Julian day, unix time stamp and UTC date-time string
 
 Path parameters
 
-* {dateref} "either ISO date string with optional time or julian day
+* :dateref: either ISO date string with optional time or julian day
   
 ### GET /positions
 
