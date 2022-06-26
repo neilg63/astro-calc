@@ -26,8 +26,7 @@ use std::path::Path;
 use std::collections::{HashMap};
 use lib::julian_date::{current_datetime_string, current_year};
 
-const SWEPH_PATH_DEFAULT: &str = "/Users/neil/apps/findingyou/findingyou-api/src/astrologic/ephe";
-//const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
+const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
 const DEFAULT_PORT: u32 = 8087;
 /// Astrologic engine config
 #[derive(Parser, Debug)]

@@ -9,9 +9,9 @@ This application extends [Stéphane Bressani's](https://github.com/stephaneworks
 * Altitude calculations
 * Easy conversion of Kronos datetimes (NaiveDatetimes) or ISO Datetime strings to and from Julian Days
 
-The main.rs file currently only tests the key methods not supported by the libswe-sys library. These are implemented in extensions/swe.ts.
+The main.rs file acts as the API controller for all astronomical and astrological methods and will eventually move to separate files. The key Swiss Epheremris functions requiring unsafe FFI calls that are not supported by the libswe-sys library, are implemented in extensions/swe.ts.
 
-It is evolving into an open-source API server, using ActixWeb, with a rich set of astrological features that may be used by other custom services in creative ways.
+The project is evolving into an open-source API server, using ActixWeb, with a rich set of astronomical and astrological features that may be used by other custom services in creative ways.
 
 # Endpoints
 
