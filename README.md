@@ -69,6 +69,14 @@ Query string parameters:
 * bodies: comma-separated list of required bodies, all or core
 * topo: 0 = geocentric, 1 topocentric
 * eq: 0 = ecliptic only, 1 equatorial only
+* hsys: Comma-separated list of house system letters or `all` for all systems, default W (whole house system)
+* aya: comma-separated list of available ayanamshas (see below). These are added as separate data-set and should be applied in a post processing stage via simple subtraction from the lng, ascendant or rectAscension values, which are always tropical (they may automatically applied in /positions)
+* p2: include progress longitudes based on 1 day = 1 year from referenced time. The progress day is mapped to years
+* p2yrs: Number of years to capture for P2 data
+* p2ago: Number of years ago for P2 start year
+* p2start: Explcit start year for p2 data (alternative to above
+* p2py: Number of p2 sample per year, default 2.
+* p2bodies: Bodies to captured for P2. These never include Uranus, Neptune, Pluto or asteroid. Narrow range to limit the payload
 
 ### GET /transitions
 
@@ -95,3 +103,49 @@ Query string parameters:
 * bodies: comma-separated list of required bodies, all or core
 * dt2: date of source chart
 * loc2: coordinates of source chart
+
+## Option Legend
+
+### Celestial Bodies / Planets, Sun, moons, asteroids etc. / Grahas
+
+* su: Sun
+* mo: Moon
+* me: Mercury
+* ve: Venus
+* ea: Earth
+* ma: Mars
+* ju: Jupiter
+* sa: Saturn
+* ne: Neptune
+* ur: Uranus
+* pl: Pluto
+* ra: True Node / Rahu,
+* ke: Opposite True Node / Ketu,
+* mn: Mean Node
+* sn: South Node
+* kr: Kronos
+* is: Isis
+* jn: Juno
+* ce: Ceres
+* ch: Chiron
+
+### Ayanamshas (sidereal mode offsets)
+
+* all: All variants listed below
+* true_citra: True Citra
+* lahiri: Lahiri
+* krishnamurti: Krishnamurti
+* yukteshwar: Yukteshwar
+* raman: Raman
+* valensmoon: Valensmoon
+* true_mula: True Mula
+* true_revati: True Revati
+* true_pushya: True Pushya
+* true_sheoran: True Sheoran
+* aldebaran_15_tau: Aldebaran 15 Tau
+* galcent_mula_wilhelm: Galcent Mula Wilhelm
+* galcent_cochrane: Galcent Cochrane
+* hipparchos: Hipparchos
+* sassanian: Sassanian
+* ushashashi: Sassanian
+* jnbhasin: Jnbhasin
