@@ -129,6 +129,33 @@ Query string parameters:
 * ce: Ceres
 * ch: Chiron
 
+### House Systems
+
+* A: equal
+* B: Alcabitius
+* C: Campanus
+* D: equal (MC)
+* E: equal
+* F: Carter poli-equ.
+* G: Gauquelin sectors
+* H: horizon/azimut
+* I: Sunshine
+* i: Sunshine/alt.
+* K: Koch
+* L: Pullen SD
+* M: Morinus
+* N: equal/1=Aries
+* O: Porphyry
+* Q: Pullen SR
+* R: Regiomontanus
+* S: Sripati
+* T: Polich/Page
+* U: Krusinski-Pisa-Goelzer
+* V: equal/Vehlow
+* W: equal/ whole sign
+* X: axial rotation system/Meridian houses
+* Y: APC houses
+
 ### Ayanamshas (sidereal mode offsets)
 
 * all: All variants listed below
