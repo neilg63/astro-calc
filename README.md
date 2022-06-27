@@ -66,15 +66,15 @@ Query string parameters:
 
 * dt: Date
 * loc: lat,lng(,alt) coordinates
-* bodies: comma-separated list of required bodies, all or core
+* bodies: comma-separated list of 2-letter abbreviations for required bodies, all or core
 * topo: 0 = geocentric, 1 topocentric
 * eq: 0 = ecliptic only, 1 equatorial only
 * hsys: Comma-separated list of house system letters or `all` for all systems, default W (whole house system)
-* aya: comma-separated list of available ayanamshas (see below). These are added as separate data-set and should be applied in a post processing stage via simple subtraction from the lng, ascendant or rectAscension values, which are always tropical (they may automatically applied in /positions)
-* p2: include progress longitudes based on 1 day = 1 year from referenced time. The progress day is mapped to years
+* aya: Comma-separated list of available ayanamshas (see below). These are added as separate data-set and should be applied in a post processing stage via simple subtraction from the lng, ascendant or rectAscension values, which are always tropical (they may automatically applied in /positions)
+* p2: include progress synastry longitudes based on 1 day = 1 year from referenced time. Progress days since the historic chart data is mapped to years.
 * p2yrs: Number of years to capture for P2 data
-* p2ago: Number of years ago for P2 start year
-* p2start: Explcit start year for p2 data (alternative to above
+* p2ago: Number of years ago for the P2 start year
+* p2start: Explcit start year for progress synastry data (alternative to above
 * p2py: Number of p2 sample per year, default 2.
 * p2bodies: Bodies to captured for P2. These never include Uranus, Neptune, Pluto or asteroid. Narrow range to limit the payload
 
@@ -108,6 +108,8 @@ Query string parameters:
 
 ### Celestial Bodies / Planets, Sun, moons, asteroids etc. / Grahas
 
+* all: All planets from Mercury to Pluto (except Earth) + Sun, Moon, Rahu (True Node) and Ketu 
+* core: All used in traditional astrology, Sun, Moon, Mars, Mercury, Jupiter, Saturn, Rahu and Ketu 
 * su: Sun
 * mo: Moon
 * me: Mercury
