@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+use libswe_sys::swerust::{handler_swe07::{PhenoUtResult}};
 use super::{general::{LngLat, ToLngLat, LngLatKey, ToLngLatKey}};
 use super::super::{julian_date::*, traits::*};
 
@@ -39,6 +40,37 @@ impl ToLngLatKey for BodyPos {
   }
 }
 
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PhenoResult {
+  #[serde(rename="phaseAngle")]
+  pub phase_angle: f64,
+  #[serde(rename="phaseIlluminated")]
+  pub phase_illuminated: f64,
+  #[serde(rename="elongationOfPlanet")]
+  pub elongation_of_planet: f64,
+  #[serde(rename="apparentDiameterOfDisc")]
+  pub apparent_diameter_of_disc: f64,
+  #[serde(rename="apparentMagnitude")]
+  pub apparent_magnitude: f64,
+}
+
+impl PhenoResult {
+  pub fn new(phase_angle: f64, phase_illuminated: f64, elongation_of_planet: f64, apparent_diameter_of_disc: f64, apparent_magnitude: f64) -> PhenoResult {
+    PhenoResult{ phase_angle: phase_angle, phase_illuminated, elongation_of_planet, apparent_diameter_of_disc,  apparent_magnitude }
+  }
+
+  pub fn new_from_result(result: PhenoUtResult) -> PhenoResult {
+    PhenoResult{ 
+      phase_angle: result.phase_angle,
+      phase_illuminated: result.phase_illuminated,
+      elongation_of_planet: result.elongation_of_planet,
+      apparent_diameter_of_disc: result.apparent_dimaeter_of_disc,
+      apparent_magnitude: result.apparent_magnitude
+     }
+  }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GrahaPos {
   pub key: String,
@@ -51,6 +83,12 @@ pub struct GrahaPos {
   #[serde(rename="rectAscension")]
   pub rect_ascension: f64,
   pub declination: f64,
+  #[serde(rename="lngSpeedEq")]
+  pub lng_speed_eq: f64,
+  #[serde(rename="latSpeedEq")]
+  pub lat_speed_eq: f64,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pheno: Option<PhenoResult>
 }
 
 impl GrahaPos {
@@ -60,7 +98,18 @@ impl GrahaPos {
    * The lng/lat speeds are ecliptic
    */
   pub fn new(key: &str, lng: f64, lat: f64, lng_speed: f64, lat_speed: f64) -> Self {
-    GrahaPos { key: key.to_string(), lng: lng, lat, lng_speed: lng_speed, lat_speed: lat_speed, rect_ascension: 0f64, declination: 0f64 }
+    GrahaPos { 
+      key: key.to_string(),
+      lng,
+      lat,
+      lng_speed,
+      lat_speed,
+      rect_ascension: 0f64,
+      declination: 0f64,
+      lng_speed_eq: 0f64,
+      lat_speed_eq: 0f64,
+      pheno: None
+    }
   }
 
   /** 
@@ -72,10 +121,13 @@ impl GrahaPos {
       key: key.to_string(),
       lng: 0f64, 
       lat: 0f64,
-      lng_speed,
-      lat_speed,
+      lng_speed: 0f64,
+      lat_speed: 0f64,
       rect_ascension,
-      declination
+      declination,
+      lng_speed_eq: lng_speed,
+      lat_speed_eq: lat_speed,
+      pheno: None
     }
   }
 
@@ -83,7 +135,7 @@ impl GrahaPos {
    * Default constructor for both the equatorial and ecliptic coordinate systems
    * The lng/lat speeds are ecliptic
    */
-  pub fn new_both(key: &str, lng: f64, lat: f64, rect_ascension: f64, declination: f64, lng_speed: f64, lat_speed: f64) -> Self {
+  pub fn new_both(key: &str, lng: f64, lat: f64, rect_ascension: f64, declination: f64, lng_speed: f64, lat_speed: f64, lng_speed_eq: f64, lat_speed_eq: f64) -> Self {
     GrahaPos { 
       key: key.to_string(),
       lng, 
@@ -92,6 +144,24 @@ impl GrahaPos {
       lat_speed,
       rect_ascension,
       declination,
+      lng_speed_eq,
+      lat_speed_eq,
+      pheno: None
+    }
+  }
+
+  pub fn new_extended(key: &str, lng: f64, lat: f64, rect_ascension: f64, declination: f64, lng_speed: f64, lat_speed: f64, lng_speed_eq: f64, lat_speed_eq: f64, pheno: Option<PhenoResult>) -> Self {
+    GrahaPos { 
+      key: key.to_string(),
+      lng, 
+      lat,
+      lng_speed,
+      lat_speed,
+      rect_ascension,
+      declination,
+      lng_speed_eq,
+      lat_speed_eq,
+      pheno
     }
   }
 
@@ -99,7 +169,18 @@ impl GrahaPos {
    * Default constructor for both the ecliptic coordinate systems without latitude speed
    */
   pub fn new_geo(key: &str, lng: f64, lat: f64, lng_speed: f64) -> Self {
-    GrahaPos { key: key.to_string(), lng: lng, lat, lng_speed: lng_speed, lat_speed: 0f64, rect_ascension: 0f64, declination: 0f64 }
+    GrahaPos { 
+      key: key.to_string(),
+      lng,
+      lat,
+      lng_speed,
+      lat_speed: 0f64,
+      rect_ascension: 0f64,
+      declination: 0f64,
+      lng_speed_eq: 0f64,
+      lat_speed_eq: 0f64,
+      pheno: None
+    }
   }
 
   /**
@@ -107,7 +188,18 @@ impl GrahaPos {
    * This may be used to elevate a true node to a full celestial object
    */
   pub fn fixed(key: &str, lng: f64, lat: f64) -> Self {
-    GrahaPos { key: key.to_string(), lng: lng, lat: lat, lng_speed: 0f64, lat_speed: 0f64, rect_ascension: 0f64, declination: 0f64 }
+    GrahaPos {
+      key: key.to_string(),
+      lng,
+      lat,
+      lng_speed: 0f64,
+      lat_speed: 0f64,
+      rect_ascension: 0f64,
+      declination: 0f64,
+      lng_speed_eq: 0f64,
+      lat_speed_eq: 0f64,
+      pheno: None
+    }
   }
 
   /**
@@ -115,7 +207,17 @@ impl GrahaPos {
    * This may be used to elevate the ascension to a full celestial object (graha)
    */
   pub fn basic(key: &str, lng: f64) -> Self {
-    GrahaPos { key: key.to_string(), lng: lng, lat: 0f64, lng_speed: 0f64, lat_speed: 0f64, rect_ascension: 0f64, declination: 0f64 }
+    GrahaPos {
+      key: key.to_string(),
+      lng, lat: 0f64,
+      lng_speed: 0f64,
+      lat_speed: 0f64,
+      rect_ascension: 0f64,
+      declination: 0f64,
+      lng_speed_eq: 0f64,
+      lat_speed_eq: 0f64,
+      pheno: None
+    }
   }
 
   pub fn to_body(&self, mode: &str) -> BodyPos {
@@ -127,7 +229,15 @@ impl GrahaPos {
       "eq" => self.declination,
       _ => self.lat
     };
-    BodyPos::new(self.key.as_str(), mode, lng, lat, self.lng_speed, self.lat_speed)
+    let lng_speed = match mode {
+      "eq" => self.lng_speed_eq,
+      _ => self.lng_speed
+    };
+    let lat_speed = match mode {
+      "eq" => self.lat_speed_eq,
+      _ => self.lat_speed
+    };
+    BodyPos::new(self.key.as_str(), mode, lng, lat, lng_speed, lat_speed)
   }
 
 }

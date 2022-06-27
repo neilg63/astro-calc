@@ -1,8 +1,8 @@
 use serde::{Serialize, Deserialize};
 use super::super::extensions::swe::{rise_trans};
 use libswe_sys::sweconst::{Bodies};
-use libswe_sys::swerust::{handler_swe07::{pheno_ut, PhenoUtResult}};
-use super::{traits::*, models::{geo_pos::*, general::*}};
+use libswe_sys::swerust::{handler_swe07::{pheno_ut}};
+use super::{traits::*, models::{geo_pos::*, general::*, graha_pos::{PhenoResult}}};
 
 pub enum TransitionParams {
   Rise = 1,
@@ -110,37 +110,6 @@ impl TransitionGroup for TransitionSet {
     ]
   }
 }
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct PhenoResult {
-  #[serde(rename="phaseAngle")]
-  pub phase_angle: f64,
-  #[serde(rename="phaseIlluminated")]
-  pub phase_illuminated: f64,
-  #[serde(rename="elongationOfPlanet")]
-  pub elongation_of_planet: f64,
-  #[serde(rename="apparentDiameterOfDisc")]
-  pub apparent_diameter_of_disc: f64,
-  #[serde(rename="apparentMagnitude")]
-  pub apparent_magnitude: f64,
-}
-
-impl PhenoResult {
-  pub fn new(phase_angle: f64, phase_illuminated: f64, elongation_of_planet: f64, apparent_diameter_of_disc: f64, apparent_magnitude: f64) -> PhenoResult {
-    PhenoResult{ phase_angle: phase_angle, phase_illuminated, elongation_of_planet, apparent_diameter_of_disc,  apparent_magnitude }
-  }
-
-  pub fn new_from_result(result: PhenoUtResult) -> PhenoResult {
-    PhenoResult{ 
-      phase_angle: result.phase_angle,
-      phase_illuminated: result.phase_illuminated,
-      elongation_of_planet: result.elongation_of_planet,
-      apparent_diameter_of_disc: result.apparent_dimaeter_of_disc,
-      apparent_magnitude: result.apparent_magnitude
-     }
-  }
-}
-
 pub fn calc_transition_set_extended(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> ExtendedTransitionSet {
   let ref_jd = start_jd_geo(jd, lng);
   let prev_set = next_set(ref_jd - 1f64, ipl, lat, lng);

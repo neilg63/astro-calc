@@ -55,7 +55,8 @@ struct InputOptions {
   offset: Option<i32>, // offset is seconds from UTC
   bodies: Option<String>, // either a comma separated list of required 2-letter celestial body keys or body group keys
   topo: Option<u8>, // 0 = geocentric, 1 topocentric, 2 both, default 0
-  eq: Option<u8>, // 0 = ecliptic, 1 equatorial, 2 both default 0
+  eq: Option<u8>, // 0 = ecliptic, 1 equatorial, 2 both, 3 with pheno data
+  ph: Option<u8>, // 0 = none (except via eq=4 in /chart-data), 1 = show pheno data
   days: Option<u16>, // duration in days where applicable
   pd: Option<u8>, // number per day, 2 => every 12 hours
   dspan: Option<u8>, // number per days per calculation
@@ -67,7 +68,9 @@ struct InputOptions {
   p2: Option<u8>, // show progress items ( P2 )
   p2ago: Option<u8>, // years ago for P2
   p2yrs: Option<u8>, // num years for p2
+  p2start: Option<u16>, // p2 start year (overrides p2 ago)
   p2py: Option<u8>, // num per year
+  p2bodies: Option<String>, // p2 body keys from su, mo, ma, me, ju, ve, sa
   aya: Option<String>, // ayanamshas
   amode: Option<String>, // apply referenced sidereal type (ayanamsha) to all longitudes
   sid: Option<u8>, // 0 tropical longitudes, 1 sidereal longitudes
@@ -209,6 +212,7 @@ async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responder {
   let show_p2: bool = params.p2.clone().unwrap_or(0) > 0;
   let topo: u8 = params.topo.clone().unwrap_or(0);
   let eq: u8 = params.eq.clone().unwrap_or(2); // 0 ecliptic, 1 equatorial, 2 both
+  let show_pheno = eq == 3 || params.ph.clone().unwrap_or(0) > 0;
   let p2_ago: u8 = params.p2ago.clone().unwrap_or(1);
   let p2_start_year = current_year() as u32 - p2_ago as u32;
   let p2_years: u8 = params.p2yrs.clone().unwrap_or(3);
@@ -221,12 +225,12 @@ async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responder {
     1 => match eq {
       0 => get_bodies_ecl_topo(date.jd, to_str_refs(&keys), geo),
       1 => get_bodies_eq_topo(date.jd, to_str_refs(&keys), geo),
-      _ => get_bodies_dual_topo(date.jd, to_str_refs(&keys), geo),
+      _ => get_bodies_dual_topo(date.jd, to_str_refs(&keys), geo, show_pheno),
     }
     _ => match eq {
       0 => get_bodies_ecl_geo(date.jd, to_str_refs(&keys)),
       1 => get_bodies_eq_geo(date.jd, to_str_refs(&keys)),
-      _ => get_bodies_dual_geo(date.jd, to_str_refs(&keys)),
+      _ => get_bodies_dual_geo(date.jd, to_str_refs(&keys), show_pheno),
     }
   };
   let mut topo_items: Vec<LngLatKey> = Vec::new();
@@ -241,8 +245,9 @@ async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responder {
   };
   
   let transitions: Vec<KeyNumValueSet> = if show_transitions { get_transition_sets(date.jd, to_str_refs(&keys), geo) } else { Vec::new() };
-  
-  let p2: Vec<ProgressItemSet> = if show_p2 { get_bodies_p2(date.jd, keys.clone(), p2_start_year, p2_years as u16, p2_per_year) } else { Vec::new() };
+  let available_p2_keys = vec!["as", "su", "mo", "ma", "me", "ju", "ve", "sa"];
+  let p2keys:Vec<String> = keys.clone().iter().filter(|k| available_p2_keys.contains(&k.as_str())).map(|s| s.to_owned()).collect();
+  let p2: Vec<ProgressItemSet> = if show_p2 { get_bodies_p2(date.jd, p2keys, p2_start_year, p2_years as u16, p2_per_year) } else { Vec::new() };
 
   let bodies: FlexiBodyPos = match eq {
     0 => FlexiBodyPos::Simple(data.iter().map(|b| b.to_body("ecl")).collect()),
