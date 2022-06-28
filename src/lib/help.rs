@@ -82,5 +82,13 @@ pub fn endpoint_help() -> HashMap<String, HashMap<String,String>> {
       ("loc2", "coordinates of source chart")
     ]
   ));
+
+  help.insert("/pheno".to_string(), info_map(
+    vec![
+      ("dt", "current date-time"),
+      ("loc", "current lat,lng(,alt) coordinates"),
+      ("bodies", "comma-separated list of required bodies, all or core"),
+    ]
+  ));
   help
 }

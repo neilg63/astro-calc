@@ -164,3 +164,14 @@ pub fn calc_progress_day_jds_by_year(source_jd: f64, start_year: u32, years: u16
   }
   items
 }
+
+pub fn calc_opposite(lng: f64) -> f64 {
+  (lng + 180f64) % 360f64
+}
+
+pub fn adjust_lng_by_body_key(key: &str, lng: f64) -> f64 {
+  match key {
+    "ke" => calc_opposite(lng),
+    _ => lng,
+  }
+}

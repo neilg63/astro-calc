@@ -1,12 +1,12 @@
 use math::round::{floor};
 use libswe_sys::sweconst::{Bodies, OptionalFlag};
 use libswe_sys::swerust::{handler_swe03::*};
-use super::{settings::{ayanamshas::*},traits::*, math_funcs::{calc_progress_day_jds_by_year}, math_funcs::{subtract_360}, transitions::{get_pheno_result}};
+use super::{settings::{ayanamshas::*},traits::*, math_funcs::{calc_progress_day_jds_by_year, adjust_lng_by_body_key}, math_funcs::{subtract_360}, transitions::{get_pheno_result}};
 use super::models::{graha_pos::*, geo_pos::*, general::*, houses::{calc_ascendant}};
 use super::super::extensions::swe::{azalt, set_topo, set_sid_mode, get_ayanamsha};
 use std::collections::{HashMap};
 
-pub fn calc_body_jd(jd: f64, sample_key: &str, sidereal: bool, topo: bool) -> GrahaPos {
+pub fn calc_body_jd(jd: f64, key: &str, sidereal: bool, topo: bool) -> GrahaPos {
   let combo: i32;
   let speed_flag = OptionalFlag::Speed as i32;
   if topo {
@@ -23,8 +23,9 @@ pub fn calc_body_jd(jd: f64, sample_key: &str, sidereal: bool, topo: bool) -> Gr
       combo = speed_flag;
     }
   }
-  let result = calc_ut(jd, Bodies::from_key(sample_key), combo);
-  GrahaPos::new(sample_key, result.longitude, result.latitude, result.speed_longitude, result.speed_latitude)
+  let result = calc_ut(jd, Bodies::from_key(key), combo);
+  let lng = adjust_lng_by_body_key(key, result.longitude);
+  GrahaPos::new(key, lng, result.latitude, result.speed_longitude, result.speed_latitude)
 }
 
 /**
@@ -42,7 +43,8 @@ pub fn calc_body_eq_jd(jd: f64, key: &str, topo: bool) -> GrahaPos {
     combo = speed_flag | eq_flag;
   }
   let result = calc_ut(jd, Bodies::from_key(key), combo);
-  GrahaPos::new_eq(key, result.longitude, result.latitude, result.speed_longitude, result.speed_latitude)
+  let lng = adjust_lng_by_body_key(key, result.longitude);
+  GrahaPos::new_eq(key, result.longitude, result.latitude, lng, result.speed_latitude)
 }
 
 pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool) -> GrahaPos {
@@ -59,7 +61,9 @@ pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool) -> Gr
   let result = calc_ut(jd, Bodies::from_key(key), combo);
   let result_geo = calc_ut(jd, Bodies::from_key(key), combo_geo);
   let pheno = if show_pheno { Some(get_pheno_result(jd, key, 0i32)) } else { None };
-  GrahaPos::new_extended(key, result_geo.longitude, result_geo.latitude, result.longitude, result.latitude, result_geo.speed_longitude, result_geo.speed_latitude,  result.speed_longitude,  result.speed_latitude, pheno)
+  let lng = adjust_lng_by_body_key(key, result_geo.longitude);
+  let ra = adjust_lng_by_body_key(key, result.longitude);
+  GrahaPos::new_extended(key, lng, result_geo.latitude,  ra, result.latitude, result_geo.speed_longitude, result_geo.speed_latitude,  result.speed_longitude, result.speed_latitude, pheno)
 }
 
 pub fn calc_body_dual_jd_geo(jd: f64, key: &str, show_pheno: bool) -> GrahaPos {
@@ -221,9 +225,8 @@ pub fn get_bodies_p2(jd: f64, keys: Vec<String>, start_year: u32, num_years: u16
   items
 }
 
-pub fn get_body_longitudes(jd: f64, geo: GeoPos, mode: &str, equatorial: bool, aya_offset: f64) -> HashMap<String, f64> {
+pub fn get_body_longitudes(jd: f64, geo: GeoPos, mode: &str, equatorial: bool, aya_offset: f64, keys: Vec<&str>) -> HashMap<String, f64> {
   let mut items: HashMap<String, f64> = HashMap::new();
-  let keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ur", "ne", "pl", "ke"];
   let bodies = match equatorial {
     true => match mode {
       "topo" => get_bodies_eq_topo(jd, keys, geo),
@@ -243,20 +246,20 @@ pub fn get_body_longitudes(jd: f64, geo: GeoPos, mode: &str, equatorial: bool, a
 }
 
 
-pub fn get_body_longitudes_geo(jd: f64, geo: GeoPos, aya_offset: f64) -> HashMap<String, f64> {
-  get_body_longitudes(jd, geo, "geo", false, aya_offset)
+pub fn get_body_longitudes_geo(jd: f64, geo: GeoPos, aya_offset: f64, keys: Vec<&str>) -> HashMap<String, f64> {
+  get_body_longitudes(jd, geo, "geo", false, aya_offset, keys)
 }
 
-pub fn get_body_longitudes_topo(jd: f64, geo: GeoPos, aya_offset: f64) -> HashMap<String, f64> {
-  get_body_longitudes(jd, geo, "topo", false, aya_offset)
+pub fn get_body_longitudes_topo(jd: f64, geo: GeoPos, aya_offset: f64, keys: Vec<&str>) -> HashMap<String, f64> {
+  get_body_longitudes(jd, geo, "topo", false, aya_offset, keys)
 }
 
-pub fn get_body_longitudes_eq_geo(jd: f64, geo: GeoPos, aya_offset: f64) -> HashMap<String, f64> {
-  get_body_longitudes(jd, geo, "geo", true, aya_offset)
+pub fn get_body_longitudes_eq_geo(jd: f64, geo: GeoPos, aya_offset: f64, keys: Vec<&str>) -> HashMap<String, f64> {
+  get_body_longitudes(jd, geo, "geo", true, aya_offset, keys)
 }
 
-pub fn get_body_longitudes_eq_topo(jd: f64, geo: GeoPos, aya_offset: f64) -> HashMap<String, f64> {
-  get_body_longitudes(jd, geo, "topo", true, aya_offset)
+pub fn get_body_longitudes_eq_topo(jd: f64, geo: GeoPos, aya_offset: f64, keys: Vec<&str>) -> HashMap<String, f64> {
+  get_body_longitudes(jd, geo, "topo", true, aya_offset, keys)
 }
 
 pub fn get_bodies_dual_topo(jd: f64, keys: Vec<&str>, geo: GeoPos, show_pheno: bool) -> Vec<GrahaPos> {

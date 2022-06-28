@@ -71,6 +71,46 @@ impl PhenoResult {
   }
 }
 
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PhenoItem {
+  pub key: String,
+  #[serde(rename="phaseAngle")]
+  pub phase_angle: f64,
+  #[serde(rename="phaseIlluminated")]
+  pub phase_illuminated: f64,
+  #[serde(rename="elongationOfPlanet")]
+  pub elongation_of_planet: f64,
+  #[serde(rename="apparentDiameterOfDisc")]
+  pub apparent_diameter_of_disc: f64,
+  #[serde(rename="apparentMagnitude")]
+  pub apparent_magnitude: f64,
+}
+
+impl PhenoItem {
+  pub fn new(key: &str, phase_angle: f64, phase_illuminated: f64, elongation_of_planet: f64, apparent_diameter_of_disc: f64, apparent_magnitude: f64) -> PhenoItem {
+    PhenoItem{ 
+      key: key.to_string(),
+      phase_angle,
+      phase_illuminated,
+      elongation_of_planet,
+      apparent_diameter_of_disc, 
+      apparent_magnitude
+    }
+  }
+
+  pub fn new_from_result(key: &str, result: PhenoUtResult) -> PhenoItem {
+    PhenoItem{ 
+      key: key.to_string(),
+      phase_angle: result.phase_angle,
+      phase_illuminated: result.phase_illuminated,
+      elongation_of_planet: result.elongation_of_planet,
+      apparent_diameter_of_disc: result.apparent_dimaeter_of_disc,
+      apparent_magnitude: result.apparent_magnitude
+     }
+  }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GrahaPos {
   pub key: String,

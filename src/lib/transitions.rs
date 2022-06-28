@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 use super::super::extensions::swe::{rise_trans};
 use libswe_sys::sweconst::{Bodies};
 use libswe_sys::swerust::{handler_swe07::{pheno_ut}};
-use super::{traits::*, models::{geo_pos::*, general::*, graha_pos::{PhenoResult}}};
+use super::{traits::*, models::{geo_pos::*, general::*, graha_pos::{PhenoResult, PhenoItem}}};
 
 pub enum TransitionParams {
   Rise = 1,
@@ -258,4 +258,15 @@ pub fn get_pheno_result(jd: f64, key: &str, iflag: i32) -> PhenoResult {
   let ipl = Bodies::from_key(key);
   let result = pheno_ut(jd, ipl, iflag);
   PhenoResult::new_from_result(result)
+}
+
+pub fn get_pheno_results(jd: f64, keys: Vec<&str>) -> Vec<PhenoItem> {
+  let mut items: Vec<PhenoItem> = Vec::new();
+  for key in keys {
+    let ipl = Bodies::from_key(key);
+    let result = pheno_ut(jd, ipl, 0i32);
+    let item = PhenoItem::new_from_result(key, result);
+    items.push(item);
+  }
+  items
 }

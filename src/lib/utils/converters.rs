@@ -11,7 +11,7 @@ pub fn body_keys_str_to_keys(key_string: String) -> Vec<String> {
 
 pub fn body_keys_str_to_keys_or(key_string: String, default_keys: Vec<&str>) -> Vec<String> {
   let keys: Vec<String> = body_keys_str_to_keys(key_string);
-  if keys.len() > 0 { keys } else { default_keys.into_iter().map(|p| p.to_string() ).collect() }
+  if keys.len() > 0 { keys.into_iter().filter(|k| k.len() == 2 && !k.contains("as")).collect() } else { default_keys.into_iter().map(|p| p.to_string() ).collect() }
 }
 
 pub fn loc_string_to_geo(loc: &str) -> Option<GeoPos> {
