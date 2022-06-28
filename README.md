@@ -60,7 +60,7 @@ Query string parameters:
 
 ### GET /chart-data
 
-Rich configurable set of astrological data for a given time and geolocation. May power astrological charts with extra transitions and ayanamshas, progress items (P2), transitions, ayanamsha variants and house systems
+Rich configurable set of astrological data for a given time and geolocation. May power astrological charts with extra transitions and ayanamsha variants, progress synastry positions (P2) and house systems.
 
 Query string parameters:
 
@@ -68,7 +68,8 @@ Query string parameters:
 * loc: lat,lng(,alt) coordinates
 * bodies: comma-separated list of 2-letter abbreviations for required bodies, all or core
 * topo: 0 = geocentric, 1 topocentric
-* eq: 0 = ecliptic only, 1 equatorial only
+* eq: 0 = ecliptic only, 1 equatorial only, 2 both ecliptic and equatorial, 3 both with extra planetary phenomena such as magnitude and phase angle
+* ph: 0 = no extra phenomena unless eq == 3, 1 = show planetary phenomena for the referenced time unless it is shown inline with celestial body data.
 * hsys: Comma-separated list of house system letters or `all` for all systems, default W (whole house system)
 * aya: Comma-separated list of available ayanamshas (see below). These are added as separate data-set and should be applied in a post processing stage via simple subtraction from the lng, ascendant or rectAscension values, which are always tropical (they may automatically applied in /positions)
 * p2: include progress synastry longitudes based on 1 day = 1 year from referenced time. Progress days since the historic chart data is mapped to years.
@@ -98,11 +99,20 @@ This shows the proejcted transitions of historic celestial body positions transp
 
 Query string parameters:
 
-* dt: current date-time
+* dt: referenced date-time
 * loc: current lat,lng(,alt) coordinates
 * bodies: comma-separated list of required bodies, all or core
 * dt2: date of source chart
 * loc2: coordinates of source chart
+
+### GET /pheno
+
+This shows planetary phenomena for the referenced time and celestial bodies. This only applies to visible planets, moons and stars
+
+Query string parameters:
+
+* dt: referenced date-time
+* bodies: comma-separated list of required bodies, all or core
 
 ## Option Legend
 
@@ -161,20 +171,20 @@ Query string parameters:
 ### Ayanamshas (sidereal mode offsets)
 
 * all: All variants listed below
-* true_citra: True Citra
-* lahiri: Lahiri
-* krishnamurti: Krishnamurti
-* yukteshwar: Yukteshwar
-* raman: Raman
-* valensmoon: Valensmoon
-* true_mula: True Mula
-* true_revati: True Revati
-* true_pushya: True Pushya
-* true_sheoran: True Sheoran
-* aldebaran_15_tau: Aldebaran 15 Tau
-* galcent_mula_wilhelm: Galcent Mula Wilhelm
-* galcent_cochrane: Galcent Cochrane
-* hipparchos: Hipparchos
-* sassanian: Sassanian
-* ushashashi: Sassanian
-* jnbhasin: Jnbhasin
+* tc, true_citra: True Citra
+* lh, lahiri: Lahiri
+* kr, krishnamurti: Krishnamurti
+* yu, yukteshwar: Yukteshwar
+* ra, raman: Raman
+* va, valensmoon: Valensmoon
+* tm, true_mula: True Mula
+* tr, true_revati: True Revati
+* tp, true_pushya: True Pushya
+* ts, true_sheoran: True Sheoran
+* at, aldebaran_15_tau: Aldebaran 15 Tau
+* gm, galcent_mula_wilhelm: Galcent Mula Wilhelm
+* gc, galcent_cochrane: Galcent Cochrane
+* hi, hipparchos: Hipparchos
+* sa, sassanian: Sassanian
+* us, ushashashi: Sassanian
+* jb, jnbhasin: Jnbhasin
