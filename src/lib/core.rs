@@ -301,6 +301,7 @@ pub fn get_ayanamsha_value_raw(jd: f64, key: &str) -> f64 {
 pub fn get_ayanamsha_value(jd: f64, key: &str) -> f64 {
   let aya_flag = Ayanamsha::from_key(key);
   match aya_flag {
+    Ayanamsha::Tropical => 0f64,
     Ayanamsha::TrueCitra => calc_true_citra(jd),
     _ => get_ayanamsha(jd, aya_flag)
   }
@@ -310,7 +311,7 @@ pub fn get_ayanamsha_values(jd: f64, keys: Vec<&str>) -> Vec<KeyNumValue> {
   let mut items: Vec<KeyNumValue> = Vec::new();
   for key in keys {
     let value = get_ayanamsha_value(jd, key);
-    items.push(KeyNumValue::new(key, value));
+    items.push(KeyNumValue::new(match_ayanamsha_key(key).as_str(), value));
   }
   items
 }

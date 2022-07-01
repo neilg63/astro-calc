@@ -107,3 +107,7 @@ pub fn all_ayanamsha_keys() -> Vec<&'static str> {
     "jnbhasin",
   ]
 }
+
+pub fn match_ayanamsha_key(key: &str) -> String {
+  Ayanamsha::from_key(key).as_string()
+}

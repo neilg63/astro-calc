@@ -18,7 +18,7 @@ use libswe_sys::swerust::{
 use serde::{Serialize, Deserialize};
 use serde_json::*;
 use clap::Parser;
-use lib::{core::*, transposed_transitions::*, transitions::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*, general::*}, utils::{validators::*, converters::*}, help::*};
+use lib::{core::*, transposed_transitions::*, transitions::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*, general::*}, utils::{validators::*, converters::*}, help::*, settings::ayanamshas::match_ayanamsha_key};
 use extensions::swe::{set_sid_mode};
 use std::sync::Mutex;
 use actix_web::{get, App, HttpServer, Responder, HttpRequest, web::{self, Data}};
@@ -26,7 +26,8 @@ use std::path::Path;
 use std::collections::{HashMap};
 use lib::julian_date::{current_datetime_string, current_year};
 
-const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
+const SWEPH_PATH_DEFAULT: &str = "/Users/neil/apps/findingyou/findingyou-api/src/astrologic/ephe";
+//const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
 const DEFAULT_PORT: u32 = 8087;
 /// Astrologic engine config
 #[derive(Parser, Debug)]
@@ -136,6 +137,7 @@ async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
   let keys = body_keys_str_to_keys_or(key_string, def_keys);
   let eq: u8 = params.eq.clone().unwrap_or(2); // 0 ecliptic, 1 equatorial, 2 both
   let date = DateInfo::new(dateref.to_string().as_str());
+  let aya_key = match_ayanamsha_key(aya.as_str());
   let ayanamsha = get_ayanamsha_value(date.jd, aya.as_str());
   let aya_offset = if sidereal { ayanamsha } else { 0f64 };
   let longitudes = match eq {
@@ -161,7 +163,7 @@ async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
   };
   let coord_system = format!("{}/{}", eq_label, topo_label );
   thread::sleep(micro_interval);
-  web::Json(json!({ "valid": valid, "date": date, "geo": geo, "longitudes": longitudes, "ayanamsha": { "key": aya, "value": ayanamsha, "applied": sidereal }, "coordinateSystem": coord_system, "sunTransitions": sun_transitions, "moonTransitions": moon_transitions }))
+  web::Json(json!({ "valid": valid, "date": date, "geo": geo, "longitudes": longitudes, "ayanamsha": { "key": aya_key, "value": ayanamsha, "applied": sidereal }, "coordinateSystem": coord_system, "sunTransitions": sun_transitions, "moonTransitions": moon_transitions }))
 }
 
 #[get("/p2")]
