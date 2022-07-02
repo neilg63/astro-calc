@@ -1,4 +1,5 @@
 use ::serde::{Serialize, Deserialize};
+use super::super::julian_date::{julian_day_to_iso_datetime};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KeyNumValue {
@@ -10,6 +11,14 @@ impl KeyNumValue {
   pub fn new(key: &str, value: f64) -> KeyNumValue {
     KeyNumValue { key: key.to_string(), value: value }
   }
+
+  pub fn as_iso_string(&self) -> KeyStringValue {
+    KeyStringValue { 
+      key: self.key.clone(),
+      value: julian_day_to_iso_datetime(self.value)
+    }
+  }
+
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -25,6 +34,18 @@ impl KeyStringValue {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct KeyStringValueSet {
+  pub key: String,
+  pub items: Vec<KeyStringValue>,
+}
+
+impl KeyStringValueSet {
+  pub fn new(key: &str, items: Vec<KeyStringValue>) -> KeyStringValueSet {
+    KeyStringValueSet { key: key.to_string(), items }
+  }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KeyNumValueSet {
   pub key: String,
   pub items: Vec<KeyNumValue>,
@@ -33,6 +54,10 @@ pub struct KeyNumValueSet {
 impl KeyNumValueSet {
   pub fn new(key: &str, items: Vec<KeyNumValue>) -> KeyNumValueSet {
     KeyNumValueSet { key: key.to_string(), items }
+  }
+
+  pub fn as_iso_strings(&self) -> KeyStringValueSet {
+    KeyStringValueSet::new(self.key.as_str(), self.items.iter().map(|item| item.as_iso_string()).collect() )
   }
 }
 
@@ -113,4 +138,12 @@ impl LngLatKey {
 
 pub trait ToLngLatKey {
   fn to_lng_lat_key(&self) -> LngLatKey;
+}
+
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum FlexiValueSet {
+  NumValues(Vec<KeyNumValueSet>),
+  StringValues(Vec<KeyStringValueSet>),
 }

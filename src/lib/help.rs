@@ -70,7 +70,8 @@ pub fn endpoint_help() -> HashMap<String, HashMap<String,String>> {
     vec![
       ("dateref", "current date-time"),
       ("loc", "current lat,lng(,alt) coordinates"),
-      ("days", "number of days worth of transitions, default 28, e.g. 366 will return a whole year")
+      ("days", "number of days worth of transitions, default 28, e.g. 366 will return a whole year"),
+      ("iso", "0 = show julian days (default), 1 = show ISO datetime UTC")
     ]
   ));
   help.insert("/transposed-transitions".to_string(), info_map(
@@ -79,7 +80,8 @@ pub fn endpoint_help() -> HashMap<String, HashMap<String,String>> {
       ("loc", "current lat,lng(,alt) coordinates"),
       ("bodies", "comma-separated list of required bodies, all or core"),
       ("dt2", "date of source chart"),
-      ("loc2", "coordinates of source chart")
+      ("loc2", "coordinates of source chart"),
+      ("iso", "0 = show julian days (default), 1 = show ISO datetime UTC"),
     ]
   ));
 

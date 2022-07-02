@@ -3,6 +3,7 @@ use super::julian_date::*;
 use super::models::{geo_pos::*, graha_pos::*};
 use super::{models::{general::{KeyNumValue, KeyNumValueSet}}};
 use super::{core::{calc_altitude,calc_body_jd, calc_body_jd_geo, calc_body_jd_topo}};
+use super::super::extensions::swe::{set_topo};
 
 const MINS_PER_DAY: i32 = 1440;
 
@@ -167,6 +168,7 @@ pub fn calc_transposed_object_transitions (
   let mut prev_jd = 0f64;
   // resample the longitude and latitude speed for the moon only
   let resample_speed = sample_key == "mo" && lng_speed != 0f64;
+  set_topo(geo.lat, geo.lng, geo.alt);
   for i in 0..max {
     let n = i as f64 * multiplier as f64;
     let day_frac = n / MINS_PER_DAY as f64;

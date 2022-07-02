@@ -1,5 +1,6 @@
 mod lib;
 mod extensions;
+mod constants;
 
 extern crate libc;
 extern crate serde_derive;
@@ -25,9 +26,8 @@ use actix_web::{get, App, HttpServer, Responder, HttpRequest, web::{self, Data}}
 use std::path::Path;
 use std::collections::{HashMap};
 use lib::julian_date::{current_datetime_string, current_year};
+use constants::*;
 
-const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";
-const DEFAULT_PORT: u32 = 8087;
 /// Astrologic engine config
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -75,6 +75,7 @@ struct InputOptions {
   amode: Option<String>, // apply referenced sidereal type (ayanamsha) to all longitudes
   sid: Option<u8>, // 0 tropical longitudes, 1 sidereal longitudes
   hsys: Option<String>, // comma-separated list of letters representing house systems to be returned. Defaults to W for whole house system
+  iso: Option<u8>, // 0 show JD, 1 show ISO UTC
 }
 
 #[get("/jd/{dateref}")]
@@ -206,16 +207,50 @@ async fn list_transitions(params: web::Query<InputOptions>) -> impl Responder {
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
   let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
-  let info = DateInfo::new(dateref.to_string().as_str());
+  let date = DateInfo::new(dateref.to_string().as_str());
+  let def_keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa"];
+  let key_string: String = params.bodies.clone().unwrap_or("".to_string());
+  let iso_mode: bool = params.iso.clone().unwrap_or(0) > 0;
+  let keys = body_keys_str_to_keys_or(key_string, def_keys);
+  let days_int = params.days.unwrap_or(1u16);
+  let num_days = if days_int >= 1 { days_int } else { 1u16 };
+  let transition_sets_jd = get_transition_sets_extended(date.jd, keys, geo, num_days);
+  let valid = transition_sets_jd.len() > 0;
+  let transition_sets = match iso_mode {
+    true => FlexiValueSet::StringValues(transition_sets_jd.iter().map(|vs| vs.as_iso_strings()).collect()),
+    _  => FlexiValueSet::NumValues(transition_sets_jd)
+  };
+  thread::sleep(micro_interval);
+  web::Json(json!({ "valid": valid, "date": date, "geo": geo, "transitionSets": transition_sets }))
+}
+
+#[get("/test-transitions")]
+async fn test_transitions(params: web::Query<InputOptions>) -> impl Responder {
+  let micro_interval = time::Duration::from_millis(30);
+  let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
+  let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
+  let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+  let date = DateInfo::new(dateref.to_string().as_str());
+  let iso_mode: bool = params.iso.clone().unwrap_or(0) > 0;
   let def_keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa"];
   let key_string: String = params.bodies.clone().unwrap_or("".to_string());
   let keys = body_keys_str_to_keys_or(key_string, def_keys);
   let days_int = params.days.unwrap_or(1u16);
   let num_days = if days_int >= 1 { days_int } else { 1u16 };
-  let transition_sets = get_transition_sets_extended(info.jd, keys, geo, num_days);
-  let valid = transition_sets.len() > 0;
+  let transition_sets_jd = get_transition_sets_extended(date.jd, keys.clone(), geo, num_days);
+  let valid = transition_sets_jd.len() > 0;
+  let transition_sets = match iso_mode {
+    true => FlexiValueSet::StringValues(transition_sets_jd.iter().map(|vs| vs.as_iso_strings()).collect()),
+    _  => FlexiValueSet::NumValues(transition_sets_jd)
+  };
+  
+  let alt_transition_sets_jd = calc_transposed_graha_transitions_from_source_refs_geo(date.jd, geo, date.jd, geo, keys.clone(), num_days);
+  let alt_transition_sets = match iso_mode {
+    true => FlexiValueSet::StringValues(alt_transition_sets_jd.iter().map(|vs| vs.as_iso_strings()).collect()),
+    _  => FlexiValueSet::NumValues(alt_transition_sets_jd)
+  };
   thread::sleep(micro_interval);
-  web::Json(json!({ "valid": valid, "date": info, "geo": geo, "transitionSets": transition_sets }))
+  web::Json(json!({ "valid": valid, "date": date, "geo": geo, "transitionSets": transition_sets, "altTransitionets": alt_transition_sets }))
 }
 
 #[get("/chart-data")]
@@ -382,6 +417,7 @@ async fn main()  -> std::io::Result<()> {
           .service(list_sun_transitions)
           .service(pheno_data)
           .service(list_transitions)
+          .service(test_transitions)
           .service(body_transposed_transitions_range)
           .route("/{sec1}", web::get().to(route_not_found))
           .route("/{sec1}/{sec2}", web::get().to(route_not_found))
