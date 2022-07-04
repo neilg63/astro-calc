@@ -53,7 +53,7 @@ pub fn calc_mid_point(first: AltitudeSample, second: AltitudeSample) -> f64 {
   let value_diff = second.value - first.value;
   let progress = second.value / value_diff;
   let jd_diff = second.jd - first.jd;
-  second.jd - jd_diff * progress
+  second.jd - (jd_diff * progress)
 }
 
 
@@ -64,8 +64,8 @@ fn calc_mid_sample(
   prev_jd: f64,
   mode: &str,
 ) -> AltitudeSample {
-  let prev_sample = AltitudeSample::new(mode, prev_min, prev_value, prev_jd );
-  let mid_point = calc_mid_point(prev_sample, item);
+  let prev_sample = AltitudeSample::new(mode, prev_min, prev_jd, prev_value );
+  let mid_point = calc_mid_point(prev_sample, item.clone());
   AltitudeSample::new(mode, prev_min, mid_point, 0f64)
 }
 
@@ -91,6 +91,7 @@ fn recalc_min_max_transit_sample(
   for i in 0..max {
     let mins = sample_start_min + i as f64 * sample_rate;
     let jd = sample_start_jd + (i as f64 * sample_rate) / MINS_PER_DAY as f64;
+    
     let value = calc_altitude(jd, false, geo.lat, geo.lng, lng, lat);
     let item = AltitudeSample::new(mode, mins, jd, value);
     if max_mode && item.value > new_sample.value {
@@ -168,7 +169,6 @@ pub fn calc_transposed_object_transitions (
   let mut prev_jd = 0f64;
   // resample the longitude and latitude speed for the moon only
   let resample_speed = sample_key == "mo" && lng_speed != 0f64;
-  set_topo(geo.lat, geo.lng, geo.alt);
   for i in 0..max {
     let n = i as f64 * multiplier as f64;
     let day_frac = n / MINS_PER_DAY as f64;
@@ -176,13 +176,14 @@ pub fn calc_transposed_object_transitions (
     let mut sample_spd = lng_speed;
     let mut lat_spd = 0f64;
     if resample_speed {
-      let sample_body = calc_body_jd(jd, sample_key, false, true);
+      let sample_body = calc_body_jd_topo(jd, sample_key, geo);
       sample_spd = sample_body.lng_speed;
       lat_spd = sample_body.lat_speed;
     }
     let adjusted_lng = if lng_speed != 0f64  { lng + sample_spd * day_frac } else { lng };
     let adjusted_lat = if lat_spd != 0f64 { lat + lat_spd * day_frac } else { lat };
     let value = calc_altitude(jd, false, geo.lat, geo.lng, adjusted_lng, adjusted_lat);
+
     let mut item = AltitudeSample::new("", n,jd, value);
     if match_mc && value > mc.value {
       item.set_mode("mc");

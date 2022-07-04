@@ -1,5 +1,5 @@
 /*
-* Default values used for servier configuration
+* Default values used for server configuration
 */
 
 const SWEPH_PATH_DEFAULT: &str = "/usr/share/libswe/ephe";

@@ -278,6 +278,10 @@ pub fn calc_altitude(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f64, ln
   azalt(tjd_ut, is_equal, geo_lat, geo_lng, lng, lat).value
 }
 
+/*
+* reconstructed from Lahiri by calculating proportional differences over 200 years. Native C implementation may be bug-prone
+* on some platforms.
+*/
 pub fn calc_true_citra(jd: f64) -> f64 {
   let jd1 = 2422324.5f64;
   let p1 = 0.9992925739019888f64;
