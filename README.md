@@ -84,6 +84,7 @@ Query string parameters:
 * dt: current date-time
 * loc: current lat,lng(,alt) coordinates
 * bodies: comma-separated list of required bodies, all or core")
+* iso: 0 = show julian days (default), 1 = show ISO datetime UTC
 
 ### GET /sun-transitions
 
@@ -92,6 +93,7 @@ Query string parameters:
 * dateref: current date-time
 * loc: current lat,lng(,alt) coordinates
 * days: number of days worth of transitions, default 28, e.g. 366 will return a whole year")
+* iso: 0 = show julian days (default), 1 = show ISO datetime UTC
 
 ### GET /transposed-transitions
 
@@ -104,6 +106,18 @@ Query string parameters:
 * bodies: comma-separated list of required bodies, all or core
 * dt2: date of source chart
 * loc2: coordinates of source chart
+* iso: 0 = show julian days (default), 1 = show ISO datetime UTC
+
+### GET /test-transitions
+
+Compare transition calculation methods. One uses swe_rise_calc and the other, better suited to polar latitudes uses swe_azalt to approximate transitions by variations in altitude. Eventually, the latter method will be uses for all latitudes > 60º or < -60º.
+
+Query string parameters:
+
+* dt: referenced date-time
+* loc: current lat,lng(,alt) coordinates
+* bodies: comma-separated list of required bodies, all or core
+* iso: 0 = show julian days (default), 1 = show ISO datetime UTC
 
 ### GET /pheno
 
