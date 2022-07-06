@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 use super::super::extensions::swe::{rise_trans};
 use libswe_sys::sweconst::{Bodies};
 use libswe_sys::swerust::{handler_swe07::{pheno_ut}};
-use super::{traits::*, models::{geo_pos::*, general::*, graha_pos::{PhenoResult, PhenoItem}}};
+use super::{traits::*, models::{geo_pos::*, general::*, graha_pos::{PhenoResult, PhenoItem}}, transposed_transitions::{calc_transitions_from_source_refs_altitude}};
 
 pub enum TransitionParams {
   Rise = 1,
@@ -110,7 +110,12 @@ impl TransitionGroup for TransitionSet {
     ]
   }
 }
-pub fn calc_transition_set_extended(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> ExtendedTransitionSet {
+
+pub fn is_near_poles(lat: f64) -> bool {
+  lat >= 60f64 || lat <= -60f64
+}
+
+pub fn calc_transition_set_extended_fast(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> ExtendedTransitionSet {
   let ref_jd = start_jd_geo(jd, lng);
   let prev_set = next_set(ref_jd - 1f64, ipl, lat, lng);
   let rise = next_rise(ref_jd, ipl, lat, lng);
@@ -130,7 +135,33 @@ pub fn calc_transition_set_extended(jd: f64, ipl: Bodies, lat: f64, lng: f64) ->
   }
 }
 
-pub fn calc_transition_set(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> TransitionSet {
+pub fn calc_transition_set_extended_azalt(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> ExtendedTransitionSet {
+  let ref_jd = start_jd_geo(jd, lng);
+  let geo = GeoPos::simple(lat, lng);
+  let ref_key = ipl.to_key();
+  let base = calc_transitions_from_source_refs_altitude(ref_jd, ref_key, geo);
+  let prev = calc_transitions_from_source_refs_altitude(ref_jd - 1f64, ref_key, geo);
+  let next = calc_transitions_from_source_refs_altitude(ref_jd + 1f64, ref_key, geo);
+  ExtendedTransitionSet { 
+    prev_set: prev.set,
+    rise: base.rise,
+    mc: base.mc,
+    set: base.set,
+    ic: base.ic,
+    next_rise: next.rise
+  }
+}
+
+
+pub fn calc_transition_set_extended(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> ExtendedTransitionSet {
+  if is_near_poles(lat) {
+    calc_transition_set_extended_azalt(jd, ipl, lat, lng)
+  } else {
+    calc_transition_set_extended_fast(jd, ipl, lat, lng)
+  }
+}
+
+pub fn calc_transition_set_fast(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> TransitionSet {
   let ref_jd = start_jd_geo(jd, lng);
   let rise = next_rise(ref_jd, ipl, lat, lng);
   let set = next_set(rise, ipl, lat, lng);
@@ -141,10 +172,19 @@ pub fn calc_transition_set(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> Transiti
   let mc = next_mc_normal(ref_jd, ipl, lat, lng);
   let ic = next_ic_normal(mc, ipl, lat, lng);
   TransitionSet { 
-    rise: rise,
-    mc: mc,
-    set: set,
-    ic: ic,
+    rise,
+    mc,
+    set,
+    ic,
+  }
+}
+
+pub fn calc_transition_set(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> TransitionSet {
+  if is_near_poles(lat) {
+    let ref_jd = start_jd_geo(jd, lng);
+    calc_transitions_from_source_refs_altitude(ref_jd, ipl.to_key(), GeoPos::simple(lat, lng))
+  } else {
+    calc_transition_set_fast(jd, ipl, lat, lng)
   }
 }
 

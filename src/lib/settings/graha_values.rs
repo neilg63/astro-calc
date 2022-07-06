@@ -30,6 +30,34 @@ impl FromKey<Bodies> for Bodies {
   }
 }
 
+impl ToKey<Bodies> for Bodies {
+
+  fn to_key(&self) -> &str {
+    match self {
+      Bodies::Sun => "su",
+      Bodies::Moon => "mo",
+      Bodies::Mercury => "me",
+      Bodies::Venus => "ve",
+      Bodies::Earth => "ea",
+      Bodies::Mars => "ma",
+      Bodies::Jupiter => "ju",
+      Bodies::Saturn => "sa",
+      Bodies::Neptune => "ne",
+      Bodies::Uranus => "ur",
+      Bodies::Pluto => "pl",
+      Bodies::TrueNode => "ra",
+      Bodies::MeanNode => "mn",
+      Bodies::Kronos => "kr",
+      Bodies::Isis => "is",
+      Bodies::Juno => "jn",
+      Bodies::Ceres => "ce",
+      Bodies::Chiron => "ch",
+      Bodies::SouthNode => "sn",
+      _ => "ea",
+    }
+  }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GrahaInfo {
   num: u8,

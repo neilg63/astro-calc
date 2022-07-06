@@ -361,22 +361,6 @@ async fn date_now() -> impl Responder {
   web::Json(json!(DateInfo::now()))
 }
 
-async fn show_path(req: HttpRequest, ) -> impl Responder {
-  if let Some(app_data) = req.app_data::<AppData>() {
-    web::Json(json!(app_data))
-  } else {
-    web::Json(json!({ "path": "N/A" }))
-  }
-}
-
-fn key_num_values_to_map(items: Vec<KeyNumValue>) -> HashMap<String, f64> {
-  let mut mp: HashMap<String, f64> = HashMap::new();
-  for item in items {
-    mp.insert(item.key, item.value);
-  }
-  mp
-}
-
 async fn welcome() -> impl Responder {
   web::Json(json!({ "message": "Welcome to Astro API", "time": DateInfo::now(), "routes": endpoint_help() }))
 }

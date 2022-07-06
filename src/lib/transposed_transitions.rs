@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 use super::julian_date::*;
 use super::models::{geo_pos::*, graha_pos::*};
 use super::{models::{general::{KeyNumValue, KeyNumValueSet}}};
-use super::{core::{calc_altitude,calc_body_jd, calc_body_jd_geo, calc_body_jd_topo}};
+use super::{core::{calc_altitude,calc_body_jd, calc_body_jd_geo, calc_body_jd_topo}, transitions::{TransitionSet}};
 use super::super::extensions::swe::{set_topo};
 
 const MINS_PER_DAY: i32 = 1440;
@@ -290,6 +290,25 @@ pub fn calc_transposed_graha_transitions_from_source_refs(mode: &str, jd_start: 
     key_num_sets.push(tr_key_set);
   }
   key_num_sets
+}
+
+
+/**
+ * Alternative method to fetch transitions for near polar latitudes (> +60 and < -60)
+*/
+pub fn calc_transitions_from_source_refs_altitude(jd: f64, key: &str, geo: GeoPos) -> TransitionSet {
+  let pos = calc_body_jd_topo(jd, key, geo);
+  let alt_samples = calc_transposed_object_transitions(jd, geo, pos.lng, pos.lat, pos.lng_speed, 5, TransitionFilter::All, key);
+  let rise = alt_samples.clone().into_iter().find(|sample| sample.mode.as_str() == "rise").unwrap_or(AltitudeSample::basic("rise"));
+  let set = alt_samples.clone().into_iter().find(|sample| sample.mode.as_str() == "set").unwrap_or(AltitudeSample::basic("set"));
+  let mc = alt_samples.clone().into_iter().find(|sample| sample.mode.as_str() == "mc").unwrap_or(AltitudeSample::basic("mc"));
+  let ic = alt_samples.clone().into_iter().find(|sample| sample.mode.as_str() == "ic").unwrap_or(AltitudeSample::basic("ic"));
+  TransitionSet { 
+    rise: rise.jd,
+    mc: mc.jd,
+    set: set.jd,
+    ic: ic.jd,
+  }
 }
 
 pub fn calc_transposed_graha_transitions_from_source_refs_topo(jd_start: f64, geo: GeoPos, jd_historic: f64, geo_historic: GeoPos, keys: Vec<String>, days: u16) -> Vec<KeyNumValueSet> {
