@@ -35,6 +35,15 @@ impl AltitudeSample {
     }
   }
 
+  pub fn basic_low(mode: &str) -> Self {
+    AltitudeSample{
+      mode: mode.to_string(),
+      mins: 0f64,
+      jd: 0f64,
+      value: -90f64,
+    }
+  }
+
   pub fn datetime_string(&self) -> String {
     return if self.jd > 0f64 { julian_day_to_iso_datetime(self.jd) } else { "".to_string() };
   }
@@ -163,7 +172,7 @@ pub fn calc_transposed_object_transitions (
   let mut ic = AltitudeSample::basic("ic");
   let mut rise = AltitudeSample::basic("rise");
   let mut set = AltitudeSample::basic("set");
-  let mut mc = AltitudeSample::basic("mc");
+  let mut mc = AltitudeSample::basic_low("mc");
   let mut prev_value = 0f64;
   let mut prev_min = 0f64;
   let mut prev_jd = 0f64;
@@ -215,7 +224,15 @@ pub fn calc_transposed_object_transitions (
   if match_ic && ic.jd > 0f64 {
     ic = recalc_min_max_transit_sample(ic, geo.clone(), lng, lat, false, multiplier);
   }
-  vec![rise, set, mc, ic].iter().filter(|item| item.jd > 0f64).map(|item| item.clone()).collect::<Vec<AltitudeSample>>()
+  if rise.jd <= 0f64 { 
+    let rise_jd = if mc.value > 0f64 { 0f64 } else { -1f64 };
+    rise = AltitudeSample::new("rise", 0f64, rise_jd, mc.value - ic.value);
+  }
+  if set.jd <= 0f64 { 
+    let set_jd = if mc.value > 0f64 { -1f64 } else { 0f64 };
+    set = AltitudeSample::new("set", 0f64, set_jd, mc.value - ic.value);
+  }
+  vec![rise, set, mc, ic]
 }
 
 pub fn calc_transposed_graha_transition(
