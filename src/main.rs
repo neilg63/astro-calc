@@ -194,8 +194,10 @@ async fn list_sun_transitions(params: web::Query<InputOptions>) -> impl Responde
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
   let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
   let days: u16 = params.days.unwrap_or(28);
+  let iso_mode: bool = params.iso.clone().unwrap_or(0) > 0;
   let info = DateInfo::new(dateref.to_string().as_str());
-  let sun_transitions = calc_transitions_sun(info.jd, days, geo);
+  let sun_transitions_jd = calc_transitions_sun(info.jd, days, geo);
+  let sun_transitions: Vec<FlexiValue> = sun_transitions_jd.iter().filter(|item| item.value != 0f64).map(|item| item.as_flexi_value(iso_mode)).collect();
   let valid = sun_transitions.len() > 0;
   thread::sleep(micro_interval);
   web::Json(json!({ "valid": valid, "date": info, "geo": geo, "sunTransitions": sun_transitions }))

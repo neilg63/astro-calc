@@ -19,6 +19,16 @@ impl KeyNumValue {
     }
   }
 
+  pub fn as_flexi_value(&self, iso_mode: bool) -> FlexiValue {
+    match self.key.as_str() {
+      "min" | "max" => FlexiValue::NumValue(KeyNumValue::new(self.key.as_str(), self.value)),
+      _ => match iso_mode {
+        true => FlexiValue::StringValue(KeyStringValue::new(self.key.as_str(),  julian_day_to_iso_datetime(self.value).as_str())),
+        _ => FlexiValue::NumValue(KeyNumValue::new(self.key.as_str(), self.value)),
+      }
+    }
+  }
+
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

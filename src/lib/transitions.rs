@@ -311,7 +311,7 @@ pub fn calc_transitions_sun(jd: f64, days: u16, geo: GeoPos) -> Vec<KeyNumValue>
   let mut sets: Vec<KeyNumValue> = Vec::new();
   for i in 0..days {
     let ref_jd = jd + i as f64;
-    let items = calc_transition_set(ref_jd, Bodies::Sun, geo.lat, geo.lng).to_key_nums();
+    let items = calc_transition_set_alt(ref_jd, Bodies::Sun, geo.lat, geo.lng).to_key_nums();
     for item in items {
       sets.push(item);
     }
@@ -425,3 +425,15 @@ pub fn get_pheno_results(jd: f64, keys: Vec<&str>) -> Vec<PhenoItem> {
   }
   items
 }
+
+/* 
+pub fn to_indian_time(jd: f64, keys: Vec<&str>) -> Vec<PhenoItem> {
+  let mut items: Vec<PhenoItem> = Vec::new();
+  for key in keys {
+    let ipl = Bodies::from_key(key);
+    let result = pheno_ut(jd, ipl, 0i32);
+    let item = PhenoItem::new_from_result(key, result);
+    items.push(item);
+  }
+  items
+} */
