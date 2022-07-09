@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 use super::super::extensions::swe::{rise_trans};
 use libswe_sys::sweconst::{Bodies};
 use libswe_sys::swerust::{handler_swe07::{pheno_ut}};
-use super::{core::{calc_altitude_object, calc_next_prev_horizon}, traits::*, models::{geo_pos::*, general::*, graha_pos::{PhenoResult, PhenoItem}}, transposed_transitions::{calc_transitions_from_source_refs_altitude, calc_transitions_from_source_refs_minmax}, julian_date::{julian_day_to_iso_datetime}};
+use super::{core::{calc_altitude_object, calc_next_prev_horizon}, traits::*, models::{geo_pos::*, general::*, graha_pos::{PhenoResult, PhenoItem}, chart::{ITime}}, transposed_transitions::{calc_transitions_from_source_refs_altitude, calc_transitions_from_source_refs_minmax}, julian_date::{julian_day_to_iso_datetime}};
 
 pub enum TransitionParams {
   Rise = 1,
@@ -426,14 +426,9 @@ pub fn get_pheno_results(jd: f64, keys: Vec<&str>) -> Vec<PhenoItem> {
   items
 }
 
-/* 
-pub fn to_indian_time(jd: f64, keys: Vec<&str>) -> Vec<PhenoItem> {
-  let mut items: Vec<PhenoItem> = Vec::new();
-  for key in keys {
-    let ipl = Bodies::from_key(key);
-    let result = pheno_ut(jd, ipl, 0i32);
-    let item = PhenoItem::new_from_result(key, result);
-    items.push(item);
-  }
-  items
-} */
+pub fn to_indian_time(jd: f64, geo: GeoPos) -> ITime {
+  let base = calc_transition_set_alt(jd, Bodies::from_key("su"), geo.lat, geo.lng);
+  let prev = calc_transition_set_alt(jd - 1f64, Bodies::from_key("su"), geo.lat, geo.lng);
+  let next = calc_transition_set_alt(jd + 1f64, Bodies::from_key("su"), geo.lat, geo.lng);
+  ITime::new(jd, prev.rise, base.rise, base.set, next.rise)
+}
