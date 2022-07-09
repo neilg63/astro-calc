@@ -1,7 +1,7 @@
 use math::round::{floor};
 use libswe_sys::sweconst::{Bodies, OptionalFlag};
 use libswe_sys::swerust::{handler_swe03::*};
-use super::{settings::{ayanamshas::*},traits::*, math_funcs::{calc_progress_day_jds_by_year, adjust_lng_by_body_key}, math_funcs::{subtract_360}, transitions::{get_pheno_result}};
+use super::{settings::{ayanamshas::*},traits::*, math_funcs::{calc_progress_day_jds_by_year, adjust_lng_by_body_key}, math_funcs::{subtract_360}, transitions::{get_pheno_result}, transposed_transitions::{calc_transitions_from_source_refs_minmax}};
 use super::models::{graha_pos::*, geo_pos::*, general::*, houses::{calc_ascendant}};
 use super::super::extensions::swe::{azalt, set_topo, set_sid_mode, get_ayanamsha};
 use std::collections::{HashMap};
@@ -276,6 +276,52 @@ pub fn get_bodies_dual_topo(jd: f64, keys: Vec<&str>, geo: GeoPos, show_pheno: b
 */
 pub fn calc_altitude(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f64, lng: f64, lat: f64) -> f64 {
   azalt(tjd_ut, is_equal, geo_lat, geo_lng, lng, lat).value
+}
+
+/*
+* Match the projected altitude of any celestial object
+*/
+pub fn calc_altitude_object(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f64, key: &str) -> f64 {
+  let pos = match is_equal {
+    true => calc_body_eq_jd_topo(tjd_ut, key, GeoPos::simple(geo_lat, geo_lng)),
+    _ => calc_body_jd_topo(tjd_ut, key, GeoPos::simple(geo_lat, geo_lng))
+  };
+  calc_altitude(tjd_ut, is_equal, geo_lat, geo_lng, pos.lng, pos.lat)
+}
+
+
+
+pub fn calc_next_prev_horizon(jd: f64, geo_lat: f64, geo_lng: f64, key: &str, down: bool, next: bool) -> f64 {
+  let unit = if next { 1f64 } else { -1f64 };
+  let mut alt = calc_altitude_object(jd, false, geo_lat, geo_lng, key);
+  let mut days: u16 = 1;
+  let mut day_jd = 0f64;
+  while ((down && alt < 0f64) || (!down && alt > 0f64)) && days < 184 {
+    let ref_jd = jd + (unit * days as f64);
+    alt = calc_altitude_object(ref_jd, false, geo_lat, geo_lng, key);
+    days += 1;
+    day_jd = ref_jd.clone();
+  }
+  if day_jd > 100f64 { 
+    let geo = GeoPos::simple(geo_lat, geo_lng);
+    let mut base = calc_transitions_from_source_refs_minmax(day_jd, key, geo);
+    
+    let mut new_day_jd = if (down && !next) || (!down && next) { base.set } else { base.rise };
+    
+    if new_day_jd < 100f64 {
+      let day_down = base.min < 0f64 && base.max < 0f64;
+      let next_jd = if (day_down && next) || (!day_down && !next)  { day_jd + 1f64 } else { day_jd - 1f64 };
+      base = calc_transitions_from_source_refs_minmax(next_jd, key, geo);
+      new_day_jd = if (down && !next) || (!down && next) { base.set } else { base.rise };
+      if new_day_jd < 100f64 {
+        let next_jd = if (day_down && next) || (!day_down && !next)  { day_jd - 1f64 } else { day_jd + 1f64 };
+        base = calc_transitions_from_source_refs_minmax(next_jd, key, geo);
+        new_day_jd = if (down && !next) || (!down && next) { base.set } else { base.rise };
+      }
+    }
+    day_jd = new_day_jd;
+  }
+  day_jd
 }
 
 /*

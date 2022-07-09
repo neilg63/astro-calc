@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 use super::julian_date::*;
 use super::models::{geo_pos::*, graha_pos::*};
 use super::{models::{general::{KeyNumValue, KeyNumValueSet}}};
-use super::{core::{calc_altitude,calc_body_jd, calc_body_jd_geo, calc_body_jd_topo}, transitions::{TransitionSet}};
+use super::{core::{calc_altitude,calc_body_jd, calc_body_jd_geo, calc_body_jd_topo}, transitions::{TransitionSet, AltTransitionSet, get_pheno_result}};
 use super::super::extensions::swe::{set_topo};
 
 const MINS_PER_DAY: i32 = 1440;
@@ -26,22 +26,24 @@ impl AltitudeSample {
     }
   }
 
-  pub fn basic(mode: &str) -> Self {
+  pub fn basic_var(mode: &str, value: f64) -> Self {
     AltitudeSample{
       mode: mode.to_string(),
       mins: 0f64,
       jd: 0f64,
-      value: 0f64,
+      value
     }
+  }
+  pub fn basic(mode: &str) -> Self {
+    AltitudeSample::basic_var(mode, 0f64)
   }
 
   pub fn basic_low(mode: &str) -> Self {
-    AltitudeSample{
-      mode: mode.to_string(),
-      mins: 0f64,
-      jd: 0f64,
-      value: -90f64,
-    }
+    AltitudeSample::basic_var(mode, -90f64)
+  }
+
+  pub fn basic_high(mode: &str) -> Self {
+    AltitudeSample::basic_var(mode, 90f64)
   }
 
   pub fn datetime_string(&self) -> String {
@@ -162,6 +164,7 @@ pub fn calc_transposed_object_transitions (
   multiplier: u8,
   filter: TransitionFilter,
   sample_key: &str,
+  rise_set_minmax: bool
 ) -> Vec<AltitudeSample> {
   let max = MINS_PER_DAY / multiplier as i32 + 1;
   let mut items: Vec<AltitudeSample> = Vec::new();
@@ -169,7 +172,7 @@ pub fn calc_transposed_object_transitions (
   let match_rise = filter.match_rise();
   let match_mc = filter.match_mc();
   let match_ic = filter.match_ic();
-  let mut ic = AltitudeSample::basic("ic");
+  let mut ic = AltitudeSample::basic_high("ic");
   let mut rise = AltitudeSample::basic("rise");
   let mut set = AltitudeSample::basic("set");
   let mut mc = AltitudeSample::basic_low("mc");
@@ -177,6 +180,11 @@ pub fn calc_transposed_object_transitions (
   let mut prev_min = 0f64;
   let mut prev_jd = 0f64;
   // resample the longitude and latitude speed for the moon only
+  let mut disc_offset = 0f64;
+  if sample_key == "su" || sample_key == "mo" {
+    let pheno = get_pheno_result(jd_start, sample_key, 0i32);
+    disc_offset = pheno.apparent_diameter_of_disc / 4f64;
+  }
   let resample_speed = sample_key == "mo" && lng_speed != 0f64;
   for i in 0..max {
     let n = i as f64 * multiplier as f64;
@@ -197,14 +205,19 @@ pub fn calc_transposed_object_transitions (
     if match_mc && value > mc.value {
       item.set_mode("mc");
       mc = item.clone();
-    } else if match_ic && value < ic.value {
+    }
+    if match_ic && value < ic.value {
       item.set_mode("ic");
       ic = item.clone();
     }
-    if match_rise && prev_value < 0f64 && value > 0f64 {
-      rise = calc_mid_sample(item.clone(), prev_min, prev_value, prev_jd, "rise");
-    } else if match_set && prev_value > 0f64 && value < 0f64 {
-      set = calc_mid_sample(item.clone(), prev_min, prev_value, prev_jd, "set");
+    let offset_pv = prev_value + disc_offset;
+    let offset_v = value + disc_offset;
+    let offset_pv2 = prev_value - disc_offset;
+    let offset_v2 = value - disc_offset;
+    if match_rise && offset_pv < 0f64 && offset_v > 0f64 {
+      rise = calc_mid_sample(item.clone(), prev_min, offset_pv, prev_jd, "rise");
+    } else if match_set && offset_pv2 > 0f64 && offset_v2 < 0f64 {
+      set = calc_mid_sample(item.clone(), prev_min, offset_pv2, prev_jd, "set");
     }
     if !match_mc && !match_ic {
       if !match_rise && match_set && set.jd > 0f64 {
@@ -224,13 +237,15 @@ pub fn calc_transposed_object_transitions (
   if match_ic && ic.jd > 0f64 {
     ic = recalc_min_max_transit_sample(ic, geo.clone(), lng, lat, false, multiplier);
   }
-  if rise.jd <= 0f64 { 
-    let rise_jd = if mc.value > 0f64 { 0f64 } else { -1f64 };
-    rise = AltitudeSample::new("rise", 0f64, rise_jd, mc.value - ic.value);
-  }
-  if set.jd <= 0f64 { 
-    let set_jd = if mc.value > 0f64 { -1f64 } else { 0f64 };
-    set = AltitudeSample::new("set", 0f64, set_jd, mc.value - ic.value);
+  if rise_set_minmax {
+    if rise.jd <= 0f64 { 
+      let rise_jd = if mc.value > 0f64 { 0f64 } else { mc.value };
+      rise = AltitudeSample::new("rise", 0f64, rise_jd, mc.value - ic.value);
+    }
+    if set.jd <= 0f64 { 
+      let set_jd = if mc.value > 0f64 { ic.value } else { 0f64 };
+      set = AltitudeSample::new("set", 0f64, set_jd, mc.value - ic.value);
+    }
   }
   vec![rise, set, mc, ic]
 }
@@ -251,6 +266,7 @@ pub fn calc_transposed_graha_transition(
     multiplier,
     filter,
     graha_pos.key.as_str(),
+    true
   )
 }
 
@@ -270,6 +286,7 @@ pub fn calc_transposed_graha_transitions_from_source_positions(jd_start: f64, ge
       5,
       TransitionFilter::All,
       graha_pos.key.as_str(),
+      true
     );
     let tr_key_set: KeyNumValueSet = KeyNumValueSet::new(graha_pos.key.as_str(), tr_samples.iter().map(|tr| tr.to_key_num()).collect());
     key_num_sets.push(tr_key_set);
@@ -299,6 +316,7 @@ pub fn calc_transposed_graha_transitions_from_source_refs(mode: &str, jd_start: 
         5,
         TransitionFilter::All,
         graha_pos.key.as_str(),
+        true
       );
       let mut new_items: Vec<KeyNumValue> = tr_samples.iter().map(|tr| tr.to_key_num()).collect();
       items.append(&mut new_items);
@@ -309,22 +327,46 @@ pub fn calc_transposed_graha_transitions_from_source_refs(mode: &str, jd_start: 
   key_num_sets
 }
 
+fn extract_from_alt_samples(alt_samples: &Vec<AltitudeSample>, key: &str) -> AltitudeSample {
+  alt_samples.into_iter().find(|sample| sample.mode.as_str() == key).unwrap_or(&AltitudeSample::basic(key)).to_owned()
+}
+
 
 /**
- * Alternative method to fetch transitions for near polar latitudes (> +60 and < -60)
+ * Alternative method to fetch transitions for near polar latitudes (> +60 and < -60) based on altitudes
 */
 pub fn calc_transitions_from_source_refs_altitude(jd: f64, key: &str, geo: GeoPos) -> TransitionSet {
   let pos = calc_body_jd_topo(jd, key, geo);
-  let alt_samples = calc_transposed_object_transitions(jd, geo, pos.lng, pos.lat, pos.lng_speed, 5, TransitionFilter::All, key);
-  let rise = alt_samples.clone().into_iter().find(|sample| sample.mode.as_str() == "rise").unwrap_or(AltitudeSample::basic("rise"));
-  let set = alt_samples.clone().into_iter().find(|sample| sample.mode.as_str() == "set").unwrap_or(AltitudeSample::basic("set"));
-  let mc = alt_samples.clone().into_iter().find(|sample| sample.mode.as_str() == "mc").unwrap_or(AltitudeSample::basic("mc"));
-  let ic = alt_samples.clone().into_iter().find(|sample| sample.mode.as_str() == "ic").unwrap_or(AltitudeSample::basic("ic"));
+  let alt_samples = calc_transposed_object_transitions(jd, geo, pos.lng, pos.lat, pos.lng_speed, 5, TransitionFilter::All, key, true);
+  let rise = extract_from_alt_samples(&alt_samples, "rise");
+  let set = extract_from_alt_samples(&alt_samples, "set");
+  let mc = extract_from_alt_samples(&alt_samples, "mc");
+  let ic = extract_from_alt_samples(&alt_samples, "ic");
   TransitionSet { 
     rise: rise.jd,
     mc: mc.jd,
     set: set.jd,
     ic: ic.jd,
+  }
+}
+
+/**
+ * Alternative method to fetch transitions for near polar latitudes (> +60 and < -60) with min and max altitudes
+*/
+pub fn calc_transitions_from_source_refs_minmax(jd: f64, key: &str, geo: GeoPos) -> AltTransitionSet {
+  let pos = calc_body_jd_topo(jd, key, geo);
+  let alt_samples = calc_transposed_object_transitions(jd, geo, pos.lng, pos.lat, pos.lng_speed, 5, TransitionFilter::All, key, false);
+  let rise = extract_from_alt_samples(&alt_samples, "rise");
+  let set = extract_from_alt_samples(&alt_samples, "set");
+  let mc = extract_from_alt_samples(&alt_samples, "mc");
+  let ic = extract_from_alt_samples(&alt_samples, "ic");
+  AltTransitionSet { 
+    min: ic.value,
+    rise: rise.jd,
+    mc: mc.jd,
+    set: set.jd,
+    ic: ic.jd,
+    max: mc.value,
   }
 }
 

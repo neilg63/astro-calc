@@ -59,6 +59,16 @@ impl KeyNumValueSet {
   pub fn as_iso_strings(&self) -> KeyStringValueSet {
     KeyStringValueSet::new(self.key.as_str(), self.items.iter().map(|item| item.as_iso_string()).collect() )
   }
+
+  pub fn as_flexi_values(&self, iso_mode: bool) -> KeyFlexiValueSet {
+    KeyFlexiValueSet::new(self.key.as_str(), self.items.iter().filter(|item| item.value != 0f64).map(|item| match item.key.as_str() {
+      "max" | "min" => FlexiValue::NumValue(item.to_owned()),
+      _ => match iso_mode {
+        true => FlexiValue::StringValue(item.as_iso_string()),
+        _ => FlexiValue::NumValue(item.to_owned())
+      }
+    }).collect() )
+  }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -146,4 +156,24 @@ pub trait ToLngLatKey {
 pub enum FlexiValueSet {
   NumValues(Vec<KeyNumValueSet>),
   StringValues(Vec<KeyStringValueSet>),
+  FlexiValues(Vec<KeyFlexiValueSet>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum FlexiValue {
+  NumValue(KeyNumValue),
+  StringValue(KeyStringValue),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct KeyFlexiValueSet {
+  pub key: String,
+  pub items: Vec<FlexiValue>,
+}
+
+impl KeyFlexiValueSet {
+  pub fn new(key: &str, items: Vec<FlexiValue>) -> KeyFlexiValueSet {
+    KeyFlexiValueSet { key: key.to_string(), items }
+  }
 }

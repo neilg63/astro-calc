@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 use super::super::extensions::swe::{rise_trans};
 use libswe_sys::sweconst::{Bodies};
 use libswe_sys::swerust::{handler_swe07::{pheno_ut}};
-use super::{traits::*, models::{geo_pos::*, general::*, graha_pos::{PhenoResult, PhenoItem}}, transposed_transitions::{calc_transitions_from_source_refs_altitude}};
+use super::{core::{calc_altitude_object, calc_next_prev_horizon}, traits::*, models::{geo_pos::*, general::*, graha_pos::{PhenoResult, PhenoItem}}, transposed_transitions::{calc_transitions_from_source_refs_altitude, calc_transitions_from_source_refs_minmax}, julian_date::{julian_day_to_iso_datetime}};
 
 pub enum TransitionParams {
   Rise = 1,
@@ -69,6 +69,8 @@ pub struct ExtendedTransitionSet {
   pub set: f64,
   pub ic: f64,
   pub next_rise: f64,
+  pub min: f64,
+  pub max: f64,
 }
 
 impl TransitionGroup for ExtendedTransitionSet {
@@ -77,13 +79,76 @@ impl TransitionGroup for ExtendedTransitionSet {
   }
 
   fn to_key_nums(&self) -> Vec<KeyNumValue> {
+    let is_up = self.min >= 0f64 && self.max > 0f64;
+    let prev_key = if is_up { "prev_rise" } else { "prev_set"};
+    let next_key = if is_up { "next_set" } else { "next_rise"};
     vec![
-      KeyNumValue::new("prev_set", self.prev_set),
+      KeyNumValue::new(prev_key, self.prev_set),
       KeyNumValue::new("rise", self.rise),
       KeyNumValue::new("mc", self.mc),
       KeyNumValue::new("set", self.set),
       KeyNumValue::new("ic", self.ic),
-      KeyNumValue::new("next_rise", self.next_rise),
+      KeyNumValue::new(next_key, self.next_rise),
+      KeyNumValue::new("min", self.min),
+      KeyNumValue::new("max", self.max),
+    ]
+  }
+}
+
+impl ExtendedTransitionSet {
+  fn to_iso_datetimes(&self) -> Vec<FlexiValue> {
+    let is_up = self.min >= 0f64 && self.max > 0f64;
+    let prev_key = if is_up { "prev_rise" } else { "prev_set"};
+    let next_key = if is_up { "next_set" } else { "next_rise"};
+    vec![
+      FlexiValue::NumValue(KeyNumValue::new("min", self.min)),
+      FlexiValue::StringValue(KeyNumValue::new(prev_key, self.prev_set).as_iso_string()),
+      FlexiValue::StringValue(KeyNumValue::new("rise", self.rise).as_iso_string()),
+      FlexiValue::StringValue(KeyNumValue::new("mc", self.rise).as_iso_string()),
+      FlexiValue::StringValue(KeyNumValue::new("set", self.rise).as_iso_string()),
+      FlexiValue::StringValue(KeyNumValue::new("ic", self.rise).as_iso_string()),
+      FlexiValue::StringValue(KeyNumValue::new(next_key, self.next_rise).as_iso_string()),
+      FlexiValue::NumValue(KeyNumValue::new("max", self.max)),
+    ]
+  }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AltTransitionSet {
+  pub min: f64,
+  pub rise: f64,
+  pub mc: f64,
+  pub set: f64,
+  pub ic: f64,
+  pub max: f64,
+}
+
+impl AltTransitionSet {
+  fn to_iso_datetimes(&self) -> Vec<FlexiValue> {
+    vec![
+      FlexiValue::NumValue(KeyNumValue::new("min", self.min)),
+      FlexiValue::StringValue(KeyNumValue::new("rise", self.rise).as_iso_string()),
+      FlexiValue::StringValue(KeyNumValue::new("mc", self.rise).as_iso_string()),
+      FlexiValue::StringValue(KeyNumValue::new("set", self.rise).as_iso_string()),
+      FlexiValue::StringValue(KeyNumValue::new("ic", self.rise).as_iso_string()),
+      FlexiValue::NumValue(KeyNumValue::new("max", self.max)),
+    ]
+  }
+}
+
+impl TransitionGroup for AltTransitionSet {
+  fn period(&self) -> f64 {
+    self.set - self.rise
+  }
+
+  fn to_key_nums(&self) -> Vec<KeyNumValue> {
+    vec![
+      KeyNumValue::new("min", self.min),
+      KeyNumValue::new("rise", self.rise),
+      KeyNumValue::new("mc", self.mc),
+      KeyNumValue::new("set", self.set),
+      KeyNumValue::new("ic", self.ic),
+      KeyNumValue::new("max", self.max),
     ]
   }
 }
@@ -102,10 +167,12 @@ impl TransitionGroup for TransitionSet {
   }
 
   fn to_key_nums(&self) -> Vec<KeyNumValue> {
+    let rise_key = if self.rise < 100f64 { "max" } else { "rise" };
+    let set_key = if self.set < 100f64 { "min" } else { "set" };
     vec![
-      KeyNumValue::new("rise", self.rise),
+      KeyNumValue::new(rise_key, self.rise),
       KeyNumValue::new("mc", self.mc),
-      KeyNumValue::new("set", self.set),
+      KeyNumValue::new(set_key, self.set),
       KeyNumValue::new("ic", self.ic),
     ]
   }
@@ -125,13 +192,35 @@ pub fn calc_transition_set_extended_fast(jd: f64, ipl: Bodies, lat: f64, lng: f6
   let mc = next_mc_normal(ref_jd, ipl, lat, lng);
   let ic = next_ic_normal(ref_jd, ipl, lat, lng);
   let next_rise = next_rise(set, ipl, lat, lng);
+  let min = calc_altitude_object(ic, false, lat, lng, ipl.to_key());
+  let max = calc_altitude_object(mc, false, lat, lng, ipl.to_key());
   ExtendedTransitionSet { 
     prev_set,
     rise,
     mc,
     set,
     ic,
-    next_rise
+    next_rise,
+    min,
+    max,
+  }
+}
+
+pub fn calc_transition_set_alt_fast(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> AltTransitionSet {
+  let ref_jd = start_jd_geo(jd, lng);
+  let rise = next_rise(ref_jd, ipl, lat, lng);
+  let set = next_set(ref_jd, ipl, lat, lng);
+  let mc = next_mc_normal(ref_jd, ipl, lat, lng);
+  let ic = next_ic_normal(ref_jd, ipl, lat, lng);
+  let min = calc_altitude_object(ic, false, lat, lng, ipl.to_key());
+  let max = calc_altitude_object(mc, false, lat, lng, ipl.to_key());
+  AltTransitionSet { 
+    min,
+    rise,
+    mc,
+    set,
+    ic,
+    max
   }
 }
 
@@ -139,17 +228,35 @@ pub fn calc_transition_set_extended_azalt(jd: f64, ipl: Bodies, lat: f64, lng: f
   let ref_jd = start_jd_geo(jd, lng);
   let geo = GeoPos::simple(lat, lng);
   let ref_key = ipl.to_key();
-  let base = calc_transitions_from_source_refs_altitude(ref_jd, ref_key, geo);
+  let base = calc_transitions_from_source_refs_minmax(ref_jd, ref_key, geo);
+  /* let prev = calc_transitions_from_source_refs_altitude(ref_jd - 1f64, ref_key, geo);
+  let next = calc_transitions_from_source_refs_altitude(ref_jd + 1f64, ref_key, geo); */
   let prev = calc_transitions_from_source_refs_altitude(ref_jd - 1f64, ref_key, geo);
   let next = calc_transitions_from_source_refs_altitude(ref_jd + 1f64, ref_key, geo);
+  let mut prev_set = prev.set;
+  let mut next_rise = next.rise;
+  if prev.rise < 100f64 || prev.set < 100f64 {
+    let down = base.min < 0f64 && base.max < 0f64;
+    prev_set = calc_next_prev_horizon(jd, lat, lng, ipl.to_key(), down, false);
+    next_rise = calc_next_prev_horizon(jd, lat, lng, ipl.to_key(), down, true);
+  }
   ExtendedTransitionSet { 
-    prev_set: prev.set,
+    prev_set,
     rise: base.rise,
     mc: base.mc,
     set: base.set,
     ic: base.ic,
-    next_rise: next.rise
+    next_rise,
+    min: base.min,
+    max: base.max,
   }
+}
+
+pub fn calc_transition_set_alt_azalt(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> AltTransitionSet {
+  let ref_jd = start_jd_geo(jd, lng);
+  let geo = GeoPos::simple(lat, lng);
+  let ref_key = ipl.to_key();
+  calc_transitions_from_source_refs_minmax(ref_jd, ref_key, geo)
 }
 
 
@@ -158,6 +265,14 @@ pub fn calc_transition_set_extended(jd: f64, ipl: Bodies, lat: f64, lng: f64) ->
     calc_transition_set_extended_azalt(jd, ipl, lat, lng)
   } else {
     calc_transition_set_extended_fast(jd, ipl, lat, lng)
+  }
+}
+
+pub fn calc_transition_set_alt(jd: f64, ipl: Bodies, lat: f64, lng: f64) -> AltTransitionSet {
+  if is_near_poles(lat) {
+    calc_transition_set_alt_azalt(jd, ipl, lat, lng)
+  } else {
+    calc_transition_set_alt_fast(jd, ipl, lat, lng)
   }
 }
 
@@ -285,7 +400,7 @@ pub fn get_transition_sets_extended(jd: f64, keys: Vec<String>, geo: GeoPos, day
     let mut tr_set: Vec<KeyNumValue> = Vec::new();
     for i in 0..days {
       let ref_jd = jd + i as f64;
-      let mut tr_set_day = calc_transition_set(ref_jd, Bodies::from_key(key.as_str()), geo.lat, geo.lng).to_key_nums();
+      let mut tr_set_day = calc_transition_set_alt(ref_jd, Bodies::from_key(key.as_str()), geo.lat, geo.lng).to_key_nums();
       tr_set.append(&mut tr_set_day);
     }
     transit_sets.push(KeyNumValueSet::new(key.as_str(), tr_set));

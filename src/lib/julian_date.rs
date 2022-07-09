@@ -68,8 +68,17 @@ pub fn julian_day_to_datetime(jd: f64) -> NaiveDateTime {
   NaiveDateTime::from_timestamp(julian_day_to_unixtime(jd), 0)
 }
 
+/*
+* Treat low, negative or zero values as numeric literals that probably represent something else
+*/
 pub fn julian_day_to_iso_datetime(jd: f64) -> String {
-  julian_day_to_datetime(jd).format("%Y-%m-%dT%H:%M:%S").to_string()
+  if jd >= 100f64 {
+    julian_day_to_datetime(jd).format("%Y-%m-%dT%H:%M:%S").to_string()
+  } else if jd != 0f64 { 
+    jd.to_string()
+  } else {
+    "".to_string()
+  }
 }
 
 pub fn current_jd() -> f64 {

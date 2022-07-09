@@ -216,10 +216,7 @@ async fn list_transitions(params: web::Query<InputOptions>) -> impl Responder {
   let num_days = if days_int >= 1 { days_int } else { 1u16 };
   let transition_sets_jd = get_transition_sets_extended(date.jd, keys, geo, num_days);
   let valid = transition_sets_jd.len() > 0;
-  let transition_sets = match iso_mode {
-    true => FlexiValueSet::StringValues(transition_sets_jd.iter().map(|vs| vs.as_iso_strings()).collect()),
-    _  => FlexiValueSet::NumValues(transition_sets_jd)
-  };
+  let transition_sets = FlexiValueSet::FlexiValues(transition_sets_jd.iter().map(|vs| vs.as_flexi_values(iso_mode)).collect());
   thread::sleep(micro_interval);
   web::Json(json!({ "valid": valid, "date": date, "geo": geo, "transitionSets": transition_sets }))
 }
@@ -239,16 +236,9 @@ async fn test_transitions(params: web::Query<InputOptions>) -> impl Responder {
   let num_days = if days_int >= 1 { days_int } else { 1u16 };
   let transition_sets_jd = get_transition_sets_extended(date.jd, keys.clone(), geo, num_days);
   let valid = transition_sets_jd.len() > 0;
-  let transition_sets = match iso_mode {
-    true => FlexiValueSet::StringValues(transition_sets_jd.iter().map(|vs| vs.as_iso_strings()).collect()),
-    _  => FlexiValueSet::NumValues(transition_sets_jd)
-  };
-  
-  let alt_transition_sets_jd = calc_transposed_graha_transitions_from_source_refs_geo(date.jd, geo, date.jd, geo, keys.clone(), num_days);
-  let alt_transition_sets = match iso_mode {
-    true => FlexiValueSet::StringValues(alt_transition_sets_jd.iter().map(|vs| vs.as_iso_strings()).collect()),
-    _  => FlexiValueSet::NumValues(alt_transition_sets_jd)
-  };
+  let transition_sets = FlexiValueSet::FlexiValues(transition_sets_jd.iter().map(|vs| vs.as_flexi_values(iso_mode)).collect());
+  let alt_transition_sets_jd = calc_transposed_graha_transitions_from_source_refs_topo(date.jd, geo, date.jd, geo, keys.clone(), num_days);
+  let alt_transition_sets = FlexiValueSet::FlexiValues(alt_transition_sets_jd.iter().map(|vs| vs.as_flexi_values(iso_mode)).collect());
   thread::sleep(micro_interval);
   web::Json(json!({ "valid": valid, "date": date, "geo": geo, "transitionSets": transition_sets, "altTransitionets": alt_transition_sets }))
 }
@@ -282,6 +272,7 @@ async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responder {
   let key_string: String = params.bodies.clone().unwrap_or("".to_string());
   let keys = body_keys_str_to_keys_or(key_string, def_keys);
   let date = DateInfo::new(dateref.to_string().as_str());
+  let iso_mode: bool = params.iso.clone().unwrap_or(0) > 0;
   let data = match topo {
     1 => match eq {
       0 => get_bodies_ecl_topo(date.jd, to_str_refs(&keys), geo),
@@ -306,7 +297,8 @@ async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responder {
     _ => get_ayanamsha_values(date.jd, aya_keys),
   };
   
-  let transitions: Vec<KeyNumValueSet> = if show_transitions { get_transition_sets(date.jd, to_str_refs(&keys), geo) } else { Vec::new() };
+  let transition_jds: Vec<KeyNumValueSet> = if show_transitions { get_transition_sets(date.jd, to_str_refs(&keys), geo) } else { Vec::new() };
+  let transitions: Vec<KeyFlexiValueSet> = transition_jds.iter().map(|item| item.as_flexi_values(iso_mode)).collect();
   let available_p2_keys = vec!["as", "su", "mo", "ma", "me", "ju", "ve", "sa"];
   let p2keys:Vec<String> = keys.clone().iter().filter(|k| available_p2_keys.contains(&k.as_str())).map(|s| s.to_owned()).collect();
   let p2: Vec<ProgressItemSet> = if show_p2 { get_bodies_p2(date.jd, p2keys, p2_start_year, p2_years as u16, p2_per_year) } else { Vec::new() };
