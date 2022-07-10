@@ -187,3 +187,11 @@ impl KeyFlexiValueSet {
     KeyFlexiValueSet { key: key.to_string(), items }
   }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum TimeMode {
+  Jd = 0,
+  Iso = 1,
+  Unix = 2,
+}
+

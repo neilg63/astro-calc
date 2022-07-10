@@ -24,7 +24,6 @@ use extensions::swe::{set_sid_mode};
 use std::sync::Mutex;
 use actix_web::{get, App, HttpServer, Responder, HttpRequest, web::{self, Data}};
 use std::path::Path;
-use std::collections::{HashMap};
 use lib::julian_date::{current_datetime_string, current_year};
 use constants::*;
 
@@ -76,6 +75,7 @@ struct InputOptions {
   sid: Option<u8>, // 0 tropical longitudes, 1 sidereal longitudes
   hsys: Option<String>, // comma-separated list of letters representing house systems to be returned. Defaults to W for whole house system
   iso: Option<u8>, // 0 show JD, 1 show ISO UTC
+  tzs: Option<i16>, // offset in seconds from UTC
 }
 
 #[get("/jd/{dateref}")]
@@ -83,6 +83,18 @@ async fn date_info(dateref: web::Path<String>) -> impl Responder {
   let date_str = dateref.as_str();
   let info = if is_decimal_str(date_str) { DateInfo::new_from_jd(date_str.parse::<f64>().unwrap()) } else { DateInfo::new(date_str) };
   web::Json(json!(info))
+}
+
+#[get("/date")]
+async fn date_info_geo(params: web::Query<InputOptions>) -> impl Responder {
+  let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+  let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
+  let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
+  let date = if is_decimal_str(dateref.as_str()) { DateInfo::new_from_jd(dateref.parse::<f64>().unwrap()) } else { DateInfo::new(dateref.as_str()) };
+  let tz_secs =  params.tzs.clone().unwrap_or(0i16);
+  let offset_secs = if tz_secs != 0i16 { Some(tz_secs) } else { None };
+  let (indian, prev, base, next, calc_offset_secs) = to_indian_time_with_transitions(date.jd, geo, offset_secs);
+  web::Json(json!({ "date": date, "indianTime": indian,  "offsetSecs": calc_offset_secs, "sun": { "prev": prev, "current": base, "next": next } }))
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -388,6 +400,7 @@ async fn main()  -> std::io::Result<()> {
           .route("/", web::get().to(welcome))
           .route("/jd", web::get().to(date_now))
           .service(date_info)
+          .service(date_info_geo)
           .service(bodies_progress)
           .service(body_positions)
           .service(chart_data_flexi)

@@ -134,6 +134,19 @@ impl AltTransitionSet {
       FlexiValue::NumValue(KeyNumValue::new("max", self.max)),
     ]
   }
+  
+  pub fn is_up(&self) -> bool {
+    (self.rise == 0f64 || self.set == 0f64) && self.min >= -0.5f64
+  }
+
+  pub fn is_down(&self) -> bool {
+    (self.rise == 0f64 || self.set == 0f64) && self.max <= 0.5f64
+  }
+
+  pub fn start_mode(&self) -> i8 {
+    if self.is_up() { 1 } else if self.is_down() { -1 } else { 0 }
+  }
+
 }
 
 impl TransitionGroup for AltTransitionSet {
@@ -379,7 +392,15 @@ pub fn start_jd_geo(jd: f64, lng: f64) -> f64 {
   let adjusted_progress = jd_progress + offset;
   let start_offset = if adjusted_progress >= 0.5 { 0.5f64 } else { -0.5f64 };
   let start = jd.floor() + start_offset;
-  start + offset
+  let ref_jd = start + offset;
+  let diff = jd - ref_jd;
+  if diff > 1f64 {
+    ref_jd + 1f64
+  } else if diff < -1f64 {
+    ref_jd - 1f64
+  } else {
+    ref_jd
+  }
 }
 
 pub fn get_transition_sets(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<KeyNumValueSet> {
@@ -426,9 +447,37 @@ pub fn get_pheno_results(jd: f64, keys: Vec<&str>) -> Vec<PhenoItem> {
   items
 }
 
-pub fn to_indian_time(jd: f64, geo: GeoPos) -> ITime {
+pub fn to_indian_time_with_transitions(jd: f64, geo: GeoPos, offset_tz_secs: Option<i16>) -> (ITime, AltTransitionSet, AltTransitionSet, AltTransitionSet, i16) {
   let base = calc_transition_set_alt(jd, Bodies::from_key("su"), geo.lat, geo.lng);
+
   let prev = calc_transition_set_alt(jd - 1f64, Bodies::from_key("su"), geo.lat, geo.lng);
   let next = calc_transition_set_alt(jd + 1f64, Bodies::from_key("su"), geo.lat, geo.lng);
-  ITime::new(jd, prev.rise, base.rise, base.set, next.rise)
+  let prev_start = match prev.start_mode() {
+    -1 => prev.mc,
+    1 => prev.ic,
+    _ => prev.rise,
+  };
+  let base_start = match base.start_mode() {
+    -1 => base.mc,
+    1 => base.ic,
+    _ => base.rise,
+  };
+
+  let base_set = match base.start_mode() {
+    -1 => prev.mc,
+    1 => next.ic,
+    _ => base.set,
+  };
+  let next_start = match next.start_mode() {
+    -1 => next.mc,
+    1 => next.ic,
+    _ => next.rise,
+  };
+  let offset_secs = if offset_tz_secs != None { offset_tz_secs.unwrap() } else { (geo.lng * 240f64) as i16 };
+  (ITime::new(jd, prev_start, base_start, base_set, next_start, offset_secs), prev, base, next, offset_secs)
+}
+
+pub fn to_indian_time(jd: f64, geo: GeoPos, offset_tz_secs: Option<i16>) -> ITime {
+  let (i_time, _, _, _, _) = to_indian_time_with_transitions(jd, geo, offset_tz_secs);
+  i_time
 }

@@ -199,20 +199,22 @@ pub struct ITime {
 
 impl ITime {
 
-  pub fn new(ref_jd: f64, prev_rise_jd: f64, rise_jd: f64, set_jd: f64, next_rise_jd: f64) -> ITime {
+  pub fn new(ref_jd: f64, prev_rise_jd: f64, rise_jd: f64, set_jd: f64, next_rise_jd: f64, offset_secs: i16) -> ITime {
     let day_before = ref_jd < rise_jd;
-    let is_day_time = (day_before && ref_jd >= prev_rise_jd) || ref_jd > set_jd;
+    let is_day_time = !day_before && ref_jd < set_jd;
     let day_start = if day_before { prev_rise_jd } else { rise_jd };
     let day_length = if day_before { rise_jd - prev_rise_jd } else { next_rise_jd - rise_jd };
-    let dt = julian_day_to_datetime(ref_jd);
+    let offset_jd = offset_secs as f64 / 86400f64;
+    let dt = julian_day_to_datetime(ref_jd + offset_jd);
     let year = dt.year();
     let day_num = dt.ordinal() as u32;
-    let progress = ref_jd - day_start / day_length;
+    let progress = (ref_jd - day_start) / day_length;
     let muhurta = (progress * 30f64).floor() as u8;
     let ghati = (progress * 60f64).floor() as u8;
     let vighati = ((progress * 1800f64).floor() % 60f64) as u8;
     let lipta = (progress * 1800f64).floor() % 60f64;
-    let week_day_num = dt.weekday() as u8;
+    let iso_week_day_num = dt.weekday() as u8 + 1;
+    let week_day_num = if iso_week_day_num == 7  { 1 } else { iso_week_day_num + 1 };
     ITime {
       year,
       day_num,
