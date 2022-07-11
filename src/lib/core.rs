@@ -47,7 +47,7 @@ pub fn calc_body_eq_jd(jd: f64, key: &str, topo: bool) -> GrahaPos {
   GrahaPos::new_eq(key, result.longitude, result.latitude, lng, result.speed_latitude)
 }
 
-pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool) -> GrahaPos {
+pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool, geo_opt: Option<GeoPos>) -> GrahaPos {
   let combo: i32;
   //let eq_flag = OptionalFlag::SEFLG_EQUATORIAL;
   let eq_flag = OptionalFlag::EquatorialPosition as i32;
@@ -63,16 +63,20 @@ pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool) -> Gr
   let pheno = if show_pheno { Some(get_pheno_result(jd, key, 0i32)) } else { None };
   let lng = adjust_lng_by_body_key(key, result_geo.longitude);
   let ra = adjust_lng_by_body_key(key, result.longitude);
-  GrahaPos::new_extended(key, lng, result_geo.latitude,  ra, result.latitude, result_geo.speed_longitude, result_geo.speed_latitude,  result.speed_longitude, result.speed_latitude, pheno)
+  let altitude = match geo_opt {
+    Some(geo) => Some(azalt(jd, true, geo.lat, geo.lng, result.longitude, result.latitude)),
+    _ => None,
+  };
+  GrahaPos::new_extended(key, lng, result_geo.latitude,  ra, result.latitude, result_geo.speed_longitude, result_geo.speed_latitude,  result.speed_longitude, result.speed_latitude, pheno, altitude)
 }
 
 pub fn calc_body_dual_jd_geo(jd: f64, key: &str, show_pheno: bool) -> GrahaPos {
-  calc_body_dual_jd(jd, key, false, show_pheno)
+  calc_body_dual_jd(jd, key, false, show_pheno, None)
 }
 
 pub fn calc_body_dual_jd_topo(jd: f64, key: &str, geo: GeoPos, show_pheno: bool) -> GrahaPos {
   set_topo(geo.lat, geo.lng, geo.alt);
-  calc_body_dual_jd(jd, key, true, show_pheno)
+  calc_body_dual_jd(jd, key, true, show_pheno, Some(geo))
 }
 
 pub fn calc_body_eq_jd_topo(jd: f64, key: &str, geo: GeoPos) -> GrahaPos {

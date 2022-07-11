@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 use libswe_sys::sweconst::{Bodies};
 use super::super::lib::settings::ayanamshas::*;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub struct AltitudeSet {
   pub azimuth: f64,
   pub value: f64,

@@ -2,6 +2,7 @@ use serde::{Serialize, Deserialize};
 use libswe_sys::swerust::{handler_swe07::{PhenoUtResult}};
 use super::{general::{LngLat, ToLngLat, LngLatKey, ToLngLatKey}};
 use super::super::{julian_date::*, traits::*};
+use super::super::super::extensions::swe::{AltitudeSet, azalt};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BodyPos {
@@ -128,7 +129,9 @@ pub struct GrahaPos {
   #[serde(rename="latSpeedEq")]
   pub lat_speed_eq: f64,
   #[serde(skip_serializing_if = "Option::is_none")]
-  pheno: Option<PhenoResult>
+  pheno: Option<PhenoResult>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  altitude: Option<AltitudeSet>
 }
 
 impl GrahaPos {
@@ -148,7 +151,8 @@ impl GrahaPos {
       declination: 0f64,
       lng_speed_eq: 0f64,
       lat_speed_eq: 0f64,
-      pheno: None
+      pheno: None,
+      altitude: None
     }
   }
 
@@ -167,7 +171,8 @@ impl GrahaPos {
       declination,
       lng_speed_eq: lng_speed,
       lat_speed_eq: lat_speed,
-      pheno: None
+      pheno: None,
+      altitude: None
     }
   }
 
@@ -186,11 +191,12 @@ impl GrahaPos {
       declination,
       lng_speed_eq,
       lat_speed_eq,
-      pheno: None
+      pheno: None,
+      altitude: None
     }
   }
 
-  pub fn new_extended(key: &str, lng: f64, lat: f64, rect_ascension: f64, declination: f64, lng_speed: f64, lat_speed: f64, lng_speed_eq: f64, lat_speed_eq: f64, pheno: Option<PhenoResult>) -> Self {
+  pub fn new_extended(key: &str, lng: f64, lat: f64, rect_ascension: f64, declination: f64, lng_speed: f64, lat_speed: f64, lng_speed_eq: f64, lat_speed_eq: f64, pheno: Option<PhenoResult>, altitude: Option<AltitudeSet>) -> Self {
     GrahaPos { 
       key: key.to_string(),
       lng, 
@@ -201,7 +207,8 @@ impl GrahaPos {
       declination,
       lng_speed_eq,
       lat_speed_eq,
-      pheno
+      pheno,
+      altitude
     }
   }
 
@@ -219,7 +226,8 @@ impl GrahaPos {
       declination: 0f64,
       lng_speed_eq: 0f64,
       lat_speed_eq: 0f64,
-      pheno: None
+      pheno: None,
+      altitude: None
     }
   }
 
@@ -238,7 +246,8 @@ impl GrahaPos {
       declination: 0f64,
       lng_speed_eq: 0f64,
       lat_speed_eq: 0f64,
-      pheno: None
+      pheno: None,
+      altitude: None
     }
   }
 
@@ -256,7 +265,8 @@ impl GrahaPos {
       declination: 0f64,
       lng_speed_eq: 0f64,
       lat_speed_eq: 0f64,
-      pheno: None
+      pheno: None,
+      altitude: None
     }
   }
 
