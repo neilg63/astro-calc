@@ -47,10 +47,11 @@ pub fn endpoint_help() -> HashMap<String, HashMap<String,String>> {
       ("loc", "lat,lng(,alt) coordinates, e.g. &loc=45.336,13.278,50 or just &loc=45.336,13.278"),
       ("bodies", "comma-separated list of required bodies, all or core"),
       ("topo", "0 = geocentric, 1 topocentric"),
-      ("eq", "0 = ecliptic only, 1 equatorial only"),
+      ("eq", "0 = ecliptic only, 1 equatorial only, 2 show equatorial and ecliptic, 3 show azimuth and altitide and other planetary phenomena"),
       ("ct", "include transits for the referenced bodies"),
       ("hsys", "Comma-separated list of house system letters or `all` for all systems, default W (whole house system)"),
       ("aya", "comma-separated list of available ayanamshas (see below). These are added as separate data-set and should be applied in a post processing stage via simple subtraction from the lng, ascendant or rectAscension values, which are always tropical (they may automatically applied in /positions)"),
+      ("iso", "0 show all times as julian days, 1 show transitions times as ISO UTC datetime strings"),
       ("p2", "include progress longitudes based on 1 day = 1 year from referenced time. The progress day is mapped to years"),
       ("p2yrs", "Number of years to capture for P2 data"),
       ("p2ago", "Number of years ago for P2 start year"),
@@ -61,9 +62,11 @@ pub fn endpoint_help() -> HashMap<String, HashMap<String,String>> {
   ));
   help.insert("/transitions".to_string(), info_map(
     vec![
-      ("dt", "current date-time"),
+      ("dt", "reference start date, default: current date"),
       ("loc", "current lat,lng(,alt) coordinates"),
-      ("bodies", "comma-separated list of required bodies, all or core")
+      ("bodies", "comma-separated list of required bodies, all or core"),
+      ("iso", "0 show all times as julian days, 1 show transitions times as ISO UTC datetime strings"),
+      ("days", "Number of days from the start date"),
     ]
   ));
   help.insert("/sun-transitions".to_string(), info_map(
