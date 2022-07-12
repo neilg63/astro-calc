@@ -488,8 +488,9 @@ pub fn next_ic_q(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, set_jd: f64) -> f
 
 pub fn start_jd_geo(jd: f64, lng: f64) -> f64 {
   let offset = (0f64 - lng / 15f64) / 24f64;
-  let jd_progress = jd % 0f64;
-  let adjusted_progress = jd_progress + offset;
+  let jd_progress = jd % 1f64;
+  let adjusted_progress = offset - jd_progress;
+  
   let start_offset = if adjusted_progress >= 0.5 { 0.5f64 } else { -0.5f64 };
   let start = jd.floor() + start_offset;
   let ref_jd = start + offset;

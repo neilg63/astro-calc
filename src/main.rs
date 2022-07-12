@@ -69,6 +69,18 @@ async fn date_info_geo(params: web::Query<InputOptions>) -> impl Responder {
   web::Json(json!({ "date": date, "indianTime": indian,  "offsetSecs": calc_offset_secs, "sun": { "prev": prev, "current": base, "next": next } }))
 }
 
+
+#[get("/test-geo-start")]
+async fn test_geo_start(params: web::Query<InputOptions>) -> impl Responder {
+  let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
+  let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
+  let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+  let date = if is_decimal_str(dateref.as_str()) { DateInfo::new_from_jd(dateref.parse::<f64>().unwrap()) } else { DateInfo::new(dateref.as_str()) };
+  let start_jd = start_jd_geo(date.jd, geo.lng);
+  let start = DateInfo::new_from_jd(start_jd);
+  web::Json(json!({ "date": date, "dayStart": start, "lng": geo.lng, "lat": geo.lat }))
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct PositionInfo {
   date: DateInfo,
@@ -166,6 +178,7 @@ async fn main()  -> std::io::Result<()> {
           .route("/jd", web::get().to(date_now))
           .service(date_info)
           .service(date_info_geo)
+          .service(test_geo_start)
           .service(bodies_progress)
           .service(body_positions)
           .service(chart_data_flexi)
