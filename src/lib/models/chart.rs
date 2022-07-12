@@ -205,7 +205,9 @@ impl ITime {
     let day_start = if day_before { prev_rise_jd } else { rise_jd };
     let day_length = if day_before { rise_jd - prev_rise_jd } else { next_rise_jd - rise_jd };
     let offset_jd = offset_secs as f64 / 86400f64;
-    let dt = julian_day_to_datetime(ref_jd + offset_jd);
+    let day_before_offset = if day_before { -1f64 } else { 0f64 };
+    // chrono date only used to calculate day of the year and week day.
+    let dt = julian_day_to_datetime(ref_jd + offset_jd + day_before_offset);
     let year = dt.year();
     let day_num = dt.ordinal() as u32;
     let progress = (ref_jd - day_start) / day_length;
