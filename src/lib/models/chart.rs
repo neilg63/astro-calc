@@ -199,9 +199,9 @@ pub struct ITime {
 
 impl ITime {
 
-  pub fn new(ref_jd: f64, prev_rise_jd: f64, rise_jd: f64, set_jd: f64, next_rise_jd: f64, offset_secs: i16) -> ITime {
-    let day_before = ref_jd < rise_jd;
-    let is_day_time = !day_before && ref_jd < set_jd;
+  pub fn new(ref_jd: f64, prev_rise_jd: f64, rise_jd: f64, set_jd: f64, next_rise_jd: f64, start_mode: i8, offset_secs: i16) -> ITime {
+    let day_before = ref_jd < rise_jd && start_mode == 0;
+    let is_day_time = (!day_before && ref_jd < set_jd && start_mode != -1) || start_mode == 1;
     let day_start = if day_before { prev_rise_jd } else { rise_jd };
     let day_length = if day_before { rise_jd - prev_rise_jd } else { next_rise_jd - rise_jd };
     let offset_jd = offset_secs as f64 / 86400f64;

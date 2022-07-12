@@ -63,11 +63,13 @@ pub trait TransitionGroup {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ExtendedTransitionSet {
+  #[serde(rename="nextRise")]
   pub prev_set: f64,
   pub rise: f64,
   pub mc: f64,
   pub set: f64,
   pub ic: f64,
+  #[serde(rename="nextRise")]
   pub next_rise: f64,
   pub min: f64,
   pub max: f64,
@@ -111,6 +113,65 @@ impl ExtendedTransitionSet {
       FlexiValue::NumValue(KeyNumValue::new("max", self.max)),
     ]
   }
+
+  pub fn is_up(&self) -> bool {
+    (self.rise == 0f64 || self.set == 0f64) && self.min >= -0.5f64
+  }
+
+  pub fn is_down(&self) -> bool {
+    (self.rise == 0f64 || self.set == 0f64) && self.max <= 0.5f64
+  }
+
+  pub fn start_mode(&self) -> i8 {
+    if self.is_up() { 1 } else if self.is_down() { -1 } else { 0 }
+  }
+
+  pub fn as_iso_datetime(&self) -> ExtendedTransitionIsoSet {
+    let prev_rise_val = if self.is_up() { self.prev_set } else { 0f64 };
+    let prev_set_val = if self.is_up() { 0f64 } else { self.prev_set };
+    let next_rise_val = if self.is_up() { 0f64 } else { self.next_rise };
+    let next_set_val = if self.is_up() { self.next_rise } else { 0f64 };
+    ExtendedTransitionIsoSet{
+      min: self.min,
+      prev_rise: julian_day_to_iso_datetime(prev_rise_val),
+      prev_set: julian_day_to_iso_datetime(prev_set_val),
+      rise: julian_day_to_iso_datetime(self.rise),
+      mc: julian_day_to_iso_datetime(self.mc),
+      set: julian_day_to_iso_datetime(self.set),
+      ic: julian_day_to_iso_datetime(self.ic),
+      next_rise: julian_day_to_iso_datetime(next_rise_val),
+      next_set: julian_day_to_iso_datetime(next_set_val),
+      max: self.max,
+    }
+  }
+
+  pub fn to_value_set(&self, iso_mode: bool) -> AltTransitionValueSet {
+    match iso_mode {
+      true => AltTransitionValueSet::ExtendedIsoValues(self.as_iso_datetime()),
+      _ => AltTransitionValueSet::ExtendedJdValues(self.to_owned())
+    }
+  }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ExtendedTransitionIsoSet {
+  #[serde(rename="prevSet",skip_serializing_if = "String::is_empty")]
+  pub prev_set: String,
+  #[serde(rename="prevRise",skip_serializing_if = "String::is_empty")]
+  pub prev_rise: String,
+  #[serde(skip_serializing_if = "String::is_empty")]
+  pub rise: String,
+  #[serde(skip_serializing_if = "String::is_empty")]
+  pub mc: String,
+  #[serde(skip_serializing_if = "String::is_empty")]
+  pub set: String,
+  pub ic: String,
+  #[serde(rename="nextRise",skip_serializing_if = "String::is_empty")]
+  pub next_rise: String,
+  #[serde(rename="nextSet",skip_serializing_if = "String::is_empty")]
+  pub next_set: String,
+  pub min: f64,
+  pub max: f64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -124,7 +185,7 @@ pub struct AltTransitionSet {
 }
 
 impl AltTransitionSet {
-  fn to_iso_datetimes(&self) -> Vec<FlexiValue> {
+ /*  fn to_iso_datetimes(&self) -> Vec<FlexiValue> {
     vec![
       FlexiValue::NumValue(KeyNumValue::new("min", self.min)),
       FlexiValue::StringValue(KeyNumValue::new("rise", self.rise).as_iso_string()),
@@ -133,7 +194,7 @@ impl AltTransitionSet {
       FlexiValue::StringValue(KeyNumValue::new("ic", self.rise).as_iso_string()),
       FlexiValue::NumValue(KeyNumValue::new("max", self.max)),
     ]
-  }
+  } */
   
   pub fn is_up(&self) -> bool {
     (self.rise == 0f64 || self.set == 0f64) && self.min >= -0.5f64
@@ -145,6 +206,24 @@ impl AltTransitionSet {
 
   pub fn start_mode(&self) -> i8 {
     if self.is_up() { 1 } else if self.is_down() { -1 } else { 0 }
+  }
+
+  pub fn as_iso_datetime(&self) -> AltTransitionIsoSet {
+    AltTransitionIsoSet{
+      min: self.min,
+      rise: julian_day_to_iso_datetime(self.rise),
+      mc: julian_day_to_iso_datetime(self.mc),
+      set: julian_day_to_iso_datetime(self.set),
+      ic: julian_day_to_iso_datetime(self.ic),
+      max: self.max,
+    }
+  }
+
+  pub fn to_value_set(&self, iso_mode: bool) -> AltTransitionValueSet {
+    match iso_mode {
+      true => AltTransitionValueSet::IsoValues(self.as_iso_datetime()),
+      _=> AltTransitionValueSet::JdValues(self.to_owned()),
+    }
   }
 
 }
@@ -164,6 +243,27 @@ impl TransitionGroup for AltTransitionSet {
       KeyNumValue::new("max", self.max),
     ]
   }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum AltTransitionValueSet {
+  JdValues(AltTransitionSet),
+  IsoValues(AltTransitionIsoSet),
+  ExtendedJdValues(ExtendedTransitionSet),
+  ExtendedIsoValues(ExtendedTransitionIsoSet),
+}
+/* 
+ This serves only show rise, set, mc and ic times as ISO UTC strings.
+*/
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AltTransitionIsoSet {
+  pub min: f64,
+  pub rise: String,
+  pub mc: String,
+  pub set: String,
+  pub ic: String,
+  pub max: f64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -447,9 +547,8 @@ pub fn get_pheno_results(jd: f64, keys: Vec<&str>) -> Vec<PhenoItem> {
   items
 }
 
-pub fn to_indian_time_with_transitions(jd: f64, geo: GeoPos, offset_tz_secs: Option<i16>) -> (ITime, AltTransitionSet, AltTransitionSet, AltTransitionSet, i16) {
-  let base = calc_transition_set_alt(jd, Bodies::from_key("su"), geo.lat, geo.lng);
-
+pub fn to_indian_time_with_transitions(jd: f64, geo: GeoPos, offset_tz_secs: Option<i16>, iso_mode: bool) -> (ITime, AltTransitionValueSet, AltTransitionValueSet, AltTransitionValueSet, i16) {
+  let current = calc_transition_set_extended(jd, Bodies::from_key("su"), geo.lat, geo.lng);
   let prev = calc_transition_set_alt(jd - 1f64, Bodies::from_key("su"), geo.lat, geo.lng);
   let next = calc_transition_set_alt(jd + 1f64, Bodies::from_key("su"), geo.lat, geo.lng);
   let prev_start = match prev.start_mode() {
@@ -457,27 +556,27 @@ pub fn to_indian_time_with_transitions(jd: f64, geo: GeoPos, offset_tz_secs: Opt
     1 => prev.ic,
     _ => prev.rise,
   };
-  let base_start = match base.start_mode() {
-    -1 => base.mc,
-    1 => base.ic,
-    _ => base.rise,
+  let base_start = match current.start_mode() {
+    -1 => current.mc,
+    1 => if current.ic < jd { current.ic} else { prev.ic },
+    _ => current.rise,
   };
 
-  let base_set = match base.start_mode() {
+  let base_set = match current.start_mode() {
     -1 => prev.mc,
     1 => next.ic,
-    _ => base.set,
+    _ => current.set,
   };
   let next_start = match next.start_mode() {
     -1 => next.mc,
-    1 => next.ic,
+    1 => if current.ic < jd { next.ic} else { current.ic },
     _ => next.rise,
   };
   let offset_secs = if offset_tz_secs != None { offset_tz_secs.unwrap() } else { (geo.lng * 240f64) as i16 };
-  (ITime::new(jd, prev_start, base_start, base_set, next_start, offset_secs), prev, base, next, offset_secs)
+  (ITime::new(jd, prev_start, base_start, base_set, next_start, current.start_mode(), offset_secs), prev.to_value_set(iso_mode), current.to_value_set(iso_mode), next.to_value_set(iso_mode), offset_secs)
 }
 
 pub fn to_indian_time(jd: f64, geo: GeoPos, offset_tz_secs: Option<i16>) -> ITime {
-  let (i_time, _, _, _, _) = to_indian_time_with_transitions(jd, geo, offset_tz_secs);
+  let (i_time, _, _, _, _) = to_indian_time_with_transitions(jd, geo, offset_tz_secs, false);
   i_time
 }

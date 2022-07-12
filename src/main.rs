@@ -63,8 +63,9 @@ async fn date_info_geo(params: web::Query<InputOptions>) -> impl Responder {
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
   let date = if is_decimal_str(dateref.as_str()) { DateInfo::new_from_jd(dateref.parse::<f64>().unwrap()) } else { DateInfo::new(dateref.as_str()) };
   let tz_secs =  params.tzs.clone().unwrap_or(0i16);
+  let iso_mode: bool = params.iso.clone().unwrap_or(0) > 0;
   let offset_secs = if tz_secs != 0i16 { Some(tz_secs) } else { None };
-  let (indian, prev, base, next, calc_offset_secs) = to_indian_time_with_transitions(date.jd, geo, offset_secs);
+  let (indian, prev, base, next, calc_offset_secs) = to_indian_time_with_transitions(date.jd, geo, offset_secs, iso_mode);
   web::Json(json!({ "date": date, "indianTime": indian,  "offsetSecs": calc_offset_secs, "sun": { "prev": prev, "current": base, "next": next } }))
 }
 
