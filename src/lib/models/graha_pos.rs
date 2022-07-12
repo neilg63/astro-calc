@@ -131,7 +131,8 @@ pub struct GrahaPos {
   #[serde(skip_serializing_if = "Option::is_none")]
   pheno: Option<PhenoResult>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  altitude: Option<AltitudeSet>
+  altitude: Option<f64>,
+  azimuth: Option<f64>
 }
 
 impl GrahaPos {
@@ -152,7 +153,8 @@ impl GrahaPos {
       lng_speed_eq: 0f64,
       lat_speed_eq: 0f64,
       pheno: None,
-      altitude: None
+      altitude: None,
+      azimuth: None
     }
   }
 
@@ -172,7 +174,8 @@ impl GrahaPos {
       lng_speed_eq: lng_speed,
       lat_speed_eq: lat_speed,
       pheno: None,
-      altitude: None
+      altitude: None,
+      azimuth: None
     }
   }
 
@@ -192,11 +195,12 @@ impl GrahaPos {
       lng_speed_eq,
       lat_speed_eq,
       pheno: None,
-      altitude: None
+      altitude: None,
+      azimuth: None
     }
   }
 
-  pub fn new_extended(key: &str, lng: f64, lat: f64, rect_ascension: f64, declination: f64, lng_speed: f64, lat_speed: f64, lng_speed_eq: f64, lat_speed_eq: f64, pheno: Option<PhenoResult>, altitude: Option<AltitudeSet>) -> Self {
+  pub fn new_extended(key: &str, lng: f64, lat: f64, rect_ascension: f64, declination: f64, lng_speed: f64, lat_speed: f64, lng_speed_eq: f64, lat_speed_eq: f64, pheno: Option<PhenoResult>, altitude: Option<f64>, azimuth: Option<f64>) -> Self {
     GrahaPos { 
       key: key.to_string(),
       lng, 
@@ -208,7 +212,8 @@ impl GrahaPos {
       lng_speed_eq,
       lat_speed_eq,
       pheno,
-      altitude
+      altitude,
+      azimuth
     }
   }
 
@@ -227,7 +232,8 @@ impl GrahaPos {
       lng_speed_eq: 0f64,
       lat_speed_eq: 0f64,
       pheno: None,
-      altitude: None
+      altitude: None,
+      azimuth: None
     }
   }
 
@@ -247,7 +253,8 @@ impl GrahaPos {
       lng_speed_eq: 0f64,
       lat_speed_eq: 0f64,
       pheno: None,
-      altitude: None
+      altitude: None,
+      azimuth: None
     }
   }
 
@@ -266,7 +273,8 @@ impl GrahaPos {
       lng_speed_eq: 0f64,
       lat_speed_eq: 0f64,
       pheno: None,
-      altitude: None
+      altitude: None,
+      azimuth: None
     }
   }
 

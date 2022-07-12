@@ -63,11 +63,19 @@ pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool, geo_o
   let pheno = if show_pheno { Some(get_pheno_result(jd, key, 0i32)) } else { None };
   let lng = adjust_lng_by_body_key(key, result_geo.longitude);
   let ra = adjust_lng_by_body_key(key, result.longitude);
-  let altitude = match geo_opt {
+  let altitude_set = match geo_opt {
     Some(geo) => Some(azalt(jd, true, geo.lat, geo.lng, result.longitude, result.latitude)),
     _ => None,
   };
-  GrahaPos::new_extended(key, lng, result_geo.latitude,  ra, result.latitude, result_geo.speed_longitude, result_geo.speed_latitude,  result.speed_longitude, result.speed_latitude, pheno, altitude)
+  let altitude = match altitude_set {
+    Some(a_set) => Some(a_set.value),
+    None => None
+  };
+  let azimuth = match altitude_set {
+    Some(a_set) => Some(a_set.azimuth),
+    None => None
+  };
+  GrahaPos::new_extended(key, lng, result_geo.latitude,  ra, result.latitude, result_geo.speed_longitude, result_geo.speed_latitude,  result.speed_longitude, result.speed_latitude, pheno, altitude, azimuth)
 }
 
 pub fn calc_body_dual_jd_geo(jd: f64, key: &str, show_pheno: bool) -> GrahaPos {
