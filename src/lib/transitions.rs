@@ -581,3 +581,22 @@ pub fn to_indian_time(jd: f64, geo: GeoPos, offset_tz_secs: Option<i16>) -> ITim
   let (i_time, _, _, _, _) = to_indian_time_with_transitions(jd, geo, offset_tz_secs, false);
   i_time
 }
+
+
+#[cfg(test)]
+mod tests {
+  use super::start_jd_geo;
+    #[test]
+    fn has_correct_geo_day_start_offset() {
+        let ref_jd = 2459731.875;
+        let day_start_utc_jd = 2459731.5;
+        let lng1 = 90f64; // 90ºE
+        let lng2 = -90f64; // 90ºW
+        let start_jd1 = start_jd_geo(ref_jd, lng1);
+        let start_jd2 = start_jd_geo(ref_jd, lng2);
+        let expected_start_1 = day_start_utc_jd - 0.25;
+        let expected_start_2 = day_start_utc_jd + 0.25;
+        assert_eq!(start_jd1, expected_start_1);
+        assert_eq!(start_jd2, expected_start_2);
+    }
+}
