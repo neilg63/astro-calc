@@ -16,6 +16,8 @@ The project is evolving into an open-source API server, using ActixWeb, with a r
 ## Build instructions:
 You may use `cargo build` to build an executable for your operating system (all versions of Linux, Mac or Windows supported by Rust 1.61). However, you will have to configure the Swiss Ephemeris data library. This may already be available if you have installed other versions of Swiss Ephemeris. On Linux libswe is installed at `/usr/share/libswe/ephe`. However, the source files can be downloaded from [www.astro.com/ftp/swisseph/](https://www.astro.com/ftp/swisseph/).
 
+The API is publicly available at [astroapi.findingyou.co](https://astroapi.findingyou.co) This is sample data-set with [equatorial and ecliptic coordinates as well as transitions of the sun, moon and core planets](https://astroapi.findingyou.co/chart-data?dt=2022-06-01T00:00:00&loc=48.15,6.667&ct=1&topo=1&eq=3&iso=1)
+
 ## Commad line parameters
 
 * -e: ephemeris path
@@ -26,6 +28,18 @@ You may use `cargo build` to build an executable for your operating system (all 
 GET /jd/:datetef
 
 Julian day, unix time stamp and UTC date-time string
+
+Path parameters
+
+* :dateref: either ISO date string with optional time or julian day
+
+GET /date
+
+Show data variants including Indian dates from sunrise to sunrise and detailed sun transition infor based on with query string parameters
+
+* dt: Date
+* loc: lat,lng(,alt) coordinates
+* iso: 0 = julian days, 1 ISO UTC
 
 Path parameters
 
@@ -45,7 +59,7 @@ Query string parameters:
 
 ### GET /progress
 
-Progress of celestial body positionss. This may power charts and 3D animations of planetary orbits over time
+Progress of celestial body positions. This may power charts and 3D animations of planetary orbits over time
 
 Query string parameters:
 
@@ -68,8 +82,8 @@ Query string parameters:
 * loc: lat,lng(,alt) coordinates
 * bodies: comma-separated list of 2-letter abbreviations for required bodies, all or core
 * topo: 0 = geocentric, 1 topocentric
-* eq: 0 = ecliptic only, 1 equatorial only, 2 both ecliptic and equatorial, 3 both with extra planetary phenomena such as magnitude and phase angle
-* ph: 0 = no extra phenomena unless eq == 3, 1 = show planetary phenomena for the referenced time unless it is shown inline with celestial body data.
+* eq: 0 = ecliptic only, 1 equatorial only, 2 both ecliptic and equatorial, 3 both with altitude, azimuth and extra planetary phenomena such as magnitude and phase angle. The azimuth and altitude will only be shown in topocentric mode.
+* ph: 0 = no extra phenomena unless eq == 3, 1 = show planetary phenomena for the referenced time unless it is shown inline with celestial body data. he azimuth and altitude will only be shown in topocentric mode.
 * hsys: Comma-separated list of house system letters or `all` for all systems, default W (whole house system)
 * aya: Comma-separated list of available ayanamshas (see below). These are added as separate data-set and should be applied in a post processing stage via simple subtraction from the lng, ascendant or rectAscension values, which are always tropical (they may automatically applied in /positions)
 * p2: include progress synastry longitudes based on 1 day = 1 year from referenced time. Progress days since the historic chart data is mapped to years.
