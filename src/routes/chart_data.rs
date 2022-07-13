@@ -45,6 +45,7 @@ async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
   let aya_key = match_ayanamsha_key(aya.as_str());
   let ayanamsha = get_ayanamsha_value(date.jd, aya.as_str());
   let aya_offset = if sidereal { ayanamsha } else { 0f64 };
+  let iso_mode: bool = params.iso.clone().unwrap_or(0) > 0;
   let longitudes = match eq {
     1 => match topo { 
       1 => get_body_longitudes_eq_topo(date.jd, geo, aya_offset, to_str_refs(&keys)),
@@ -56,8 +57,8 @@ async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
     }
   };
   let valid = longitudes.len() > 0;
-  let sun_transitions = calc_transition_sun(date.jd, geo);
-  let moon_transitions = calc_transition_moon(date.jd, geo);
+  let sun_transitions = calc_transition_sun(date.jd, geo).to_value_set(iso_mode);
+  let moon_transitions = calc_transition_moon(date.jd, geo).to_value_set(iso_mode);
   let eq_label = match eq {
     1 => "equatorial",
     _ => "ecliptic",
