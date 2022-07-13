@@ -56,6 +56,7 @@ Query string parameters:
 * bodies: comma-separated list of required bodies, all or core
 * topo: 0 = geocentric, 1 topocentric
 * eq: 0 = ecliptic, 1 equatorial
+* iso: 0 = julian days (transition times), 1 ISO UTC
 
 ### GET /progress
 
