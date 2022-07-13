@@ -83,8 +83,13 @@ Query string parameters:
 * loc: lat,lng(,alt) coordinates
 * bodies: comma-separated list of 2-letter abbreviations for required bodies, all or core
 * topo: 0 = geocentric, 1 topocentric
-* eq: 0 = ecliptic only, 1 equatorial only, 2 both ecliptic and equatorial, 3 both with altitude, azimuth and extra planetary phenomena such as magnitude and phase angle. The azimuth and altitude will only be shown in topocentric mode.
-* ph: 0 = no extra phenomena unless eq == 3, 1 = show planetary phenomena for the referenced time unless it is shown inline with celestial body data. he azimuth and altitude will only be shown in topocentric mode.
+* eq: 
+  * 0 = ecliptic only,
+  * 1 equatorial only,
+  * 2 both ecliptic and equatorial,
+  * 3 both with altitude, azimuth and extra planetary phenomena such as magnitude and phase angle. The azimuth and altitude will only be shown in topocentric mode.
+  * 4 With extra planetary phenomena such as magnitude and phase angle as an inline subset.
+* ph: 0 = no extra phenomena unless eq == 4, 1 = show planetary phenomena for the referenced time unless it is shown inline with celestial body data.
 * hsys: Comma-separated list of house system letters or `all` for all systems, default W (whole house system)
 * aya: Comma-separated list of available ayanamshas (see below). These are added as separate data-set and should be applied in a post processing stage via simple subtraction from the lng, ascendant or rectAscension values, which are always tropical (they may automatically applied in /positions)
 * p2: include progress synastry longitudes based on 1 day = 1 year from referenced time. Progress days since the historic chart data is mapped to years.
