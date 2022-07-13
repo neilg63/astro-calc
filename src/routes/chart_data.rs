@@ -59,15 +59,7 @@ async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
   let valid = longitudes.len() > 0;
   let sun_transitions = calc_transition_sun(date.jd, geo).to_value_set(iso_mode);
   let moon_transitions = calc_transition_moon(date.jd, geo).to_value_set(iso_mode);
-  let eq_label = match eq {
-    1 => "equatorial",
-    _ => "ecliptic",
-  };
-  let topo_label = match topo {
-    1 => "topocentric",
-    _ => "geocentric",
-  };
-  let coord_system = format!("{}/{}", eq_label, topo_label );
+  let coord_system = build_coord_system_label(eq > 0, topo > 0);
   thread::sleep(micro_interval);
   web::Json(json!({ "valid": valid, "date": date, "geo": geo, "longitudes": longitudes, "ayanamsha": { "key": aya_key, "value": ayanamsha, "applied": sidereal }, "coordinateSystem": coord_system, "sunTransitions": sun_transitions, "moonTransitions": moon_transitions }))
 }
@@ -91,7 +83,7 @@ pub async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responde
   let show_p2: bool = params.p2.clone().unwrap_or(0) > 0;
   let topo: u8 = params.topo.clone().unwrap_or(0);
   let eq: u8 = params.eq.clone().unwrap_or(2); // 0 ecliptic, 1 equatorial, 2 both
-  let show_pheno_inline = eq == 3;
+  let show_pheno_inline = eq == 4;
   let show_pheno_below = !show_pheno_inline && params.ph.clone().unwrap_or(0) > 0;
   let p2_ago: u8 = params.p2ago.clone().unwrap_or(1);
   let p2_start_year = current_year() as u32 - p2_ago as u32;
@@ -141,4 +133,43 @@ pub async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responde
   
   //web::Json(json!({ "valid": valid, "date": date, "geo": geo, "bodies": bodies, "topoVariants": topo_variants, "house": house_data, "ayanamshas": ayanamshas, "transitions": transitions, "progressItems": p2, "pheno": pheno_items }))
   web::Json(json!( ChartDataResult{ valid, date, geo, bodies, topo_variants, house, ayanamshas, transitions, progress_items: p2, pheno: pheno_items}))
+}
+
+#[get("/progress")]
+async fn bodies_progress(params: web::Query<InputOptions>) -> impl Responder {
+  let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+  let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
+  let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
+  let def_keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ur", "ne", "pl", "ke"];
+  let key_string: String = params.bodies.clone().unwrap_or("".to_string());
+  let topo: bool = params.topo.clone().unwrap_or(0) > 0;
+  let eq: bool = params.eq.clone().unwrap_or(0)  > 0; // 0 ecliptic, 1 equatorial, 2 both
+  let iso_mode: bool = params.iso.clone().unwrap_or(0) > 0;
+  let days: u16 = params.days.unwrap_or(28);
+  let per_day = params.pd.clone().unwrap_or(0);
+  let day_span = params.dspan.clone().unwrap_or(0);
+  let per_day_f64 = if per_day > 0 && per_day < 24 { per_day as f64 } else if day_span > 0 && (day_span as u16) < days { 1f64 / day_span as f64 } else { 2f64 };
+  let num_samples = days * per_day_f64 as u16; 
+  let days_spanned = if num_samples > 1000 { (1000f64 / per_day_f64) as u16 } else { days };
+  let micro_interval = time::Duration::from_millis(20 + (num_samples / 4) as u64);
+  let keys = body_keys_str_to_keys_or(key_string, def_keys);
+  let date = DateInfo::new(dateref.to_string().as_str());
+  let geo_opt = if topo { Some(geo) } else { None };
+  let data = calc_bodies_positions_jd(date.jd, to_str_refs(&keys), days_spanned, per_day_f64, geo_opt, eq, iso_mode);
+  let frequency = if per_day_f64 < 1f64 { format!("{} days", day_span) } else { format!("{} per day", per_day_f64) };
+  let coord_system = build_coord_system_label(eq, topo);
+  thread::sleep(micro_interval);
+  web::Json(json!(json!({ "date": date, "geo": geo, "items": data, "num_samples": num_samples, "days": days, "frequency": frequency, "coordinateSystem": coord_system })))
+}
+
+fn build_coord_system_label(eq: bool, topo: bool) -> String {
+  let eq_label = match eq {
+    true => "equatorial",
+    _ => "ecliptic",
+  };
+  let topo_label = match topo {
+    true => "topocentric",
+    _ => "geocentric",
+  };
+  format!("{}/{}", eq_label, topo_label )
 }

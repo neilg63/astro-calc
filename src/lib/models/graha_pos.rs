@@ -13,6 +13,7 @@ pub struct BodyPos {
   pub lng_speed: f64,
   #[serde(rename="latSpeed")]
   pub lat_speed: f64,
+  #[serde(skip_serializing)]
   pub mode: String,
 }
 
@@ -132,6 +133,7 @@ pub struct GrahaPos {
   pheno: Option<PhenoResult>,
   #[serde(skip_serializing_if = "Option::is_none")]
   altitude: Option<f64>,
+  #[serde(skip_serializing_if = "Option::is_none")]
   azimuth: Option<f64>
 }
 
@@ -344,12 +346,15 @@ impl ToISODateString for GrahaPosItem {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GrahaPosSet {
   pub jd: f64,
-  pub bodies: Vec<GrahaPos>,
+  #[serde(skip_serializing_if = "String::is_empty")]
+  pub dt: String,
+  pub bodies: Vec<BodyPos>,
 }
 
 impl GrahaPosSet {
-  pub fn new(jd: f64, bodies: Vec<GrahaPos>) -> GrahaPosSet {
-    GrahaPosSet { jd, bodies }
+  pub fn new(jd: f64, bodies: Vec<GrahaPos>, mode: &str, iso: bool) -> GrahaPosSet {
+    let dt = if iso { julian_day_to_iso_datetime(jd) } else { "".to_string() };
+    GrahaPosSet { jd, dt, bodies: bodies.into_iter().map(|g| g.to_body(mode)).collect() }
   }
 }
 

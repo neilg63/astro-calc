@@ -96,31 +96,6 @@ impl PositionInfo {
   }
 }
 
-#[get("/progress")]
-async fn bodies_progress(params: web::Query<InputOptions>) -> impl Responder {
-  let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
-  let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
-  let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
-  let def_keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ur", "ne", "pl", "ke"];
-  let key_string: String = params.bodies.clone().unwrap_or("".to_string());
-  let topo: bool = params.topo.clone().unwrap_or(0) > 0;
-  let eq: bool = params.eq.clone().unwrap_or(0)  > 0; // 0 ecliptic, 1 equatorial, 2 both
-  let days: u16 = params.days.unwrap_or(28);
-  let per_day = params.pd.clone().unwrap_or(0);
-  let day_span = params.dspan.clone().unwrap_or(0);
-  let per_day_f64 = if per_day > 0 && per_day < 24 { per_day as f64 } else if day_span > 0 && (day_span as u16) < days { 1f64 / day_span as f64 } else { 2f64 };
-  let num_samples = days * per_day_f64 as u16; 
-  let days_spanned = if num_samples > 1000 { (1000f64 / per_day_f64) as u16 } else { days };
-  let micro_interval = time::Duration::from_millis(20 + (num_samples / 4) as u64);
-  let keys = body_keys_str_to_keys_or(key_string, def_keys);
-  let date = DateInfo::new(dateref.to_string().as_str());
-  let geo_opt = if topo { Some(geo) } else { None };
-  let data = calc_bodies_positions_jd(date.jd, to_str_refs(&keys), days_spanned, per_day_f64, geo_opt, eq);
-  let frequency = if per_day_f64 < 1f64 { format!("{} days", day_span) } else { format!("{} per day", per_day_f64) };
-  thread::sleep(micro_interval);
-  web::Json(json!(json!({ "date": date, "geo": geo, "items": data, "num_samples": num_samples, "days": days, "frequency": frequency })))
-}
-
 #[get("/p2")]
 async fn progress_synastry(params: web::Query<InputOptions>) -> impl Responder {
   let micro_interval = time::Duration::from_millis(30);  

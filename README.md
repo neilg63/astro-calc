@@ -7,7 +7,7 @@ This application extends [Stéphane Bressani's](https://github.com/stephaneworks
 * Indian times based on sunrise and sunset
 * Transposed transitions of any celestial points
 * Altitude calculations
-* Easy conversion of Kronos datetimes (NaiveDatetimes) or ISO Datetime strings to and from Julian Days
+* Easy conversion of chrono datetimes (NaiveDatetimes) or ISO Datetime strings to and from Julian Days
 
 The main.rs file acts as the API controller for all astronomical and astrological methods and will eventually move to separate files. The key Swiss Epheremris functions requiring unsafe FFI calls that are not supported by the libswe-sys library, are implemented in extensions/swe.ts.
 
