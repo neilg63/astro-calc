@@ -3,6 +3,7 @@ mod extensions;
 mod constants;
 mod query_params;
 mod routes;
+mod help;
 
 extern crate libc;
 extern crate serde_derive;
@@ -21,7 +22,7 @@ use libswe_sys::swerust::{
 use serde::{Serialize, Deserialize};
 use serde_json::*;
 use clap::Parser;
-use lib::{core::*, transitions::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*, general::*}, utils::{validators::*, converters::*}, help::*, settings::ayanamshas::match_ayanamsha_key};
+use lib::{core::*, transitions::*, models::{geo_pos::*, graha_pos::*, date_info::*, general::*}, utils::{validators::*, converters::*}};
 use extensions::swe::{set_sid_mode};
 use std::sync::Mutex;
 use actix_web::{get, App, HttpServer, Responder, web::{self, Data}};
@@ -29,6 +30,7 @@ use std::path::Path;
 use lib::julian_date::{current_datetime_string, current_year};
 use constants::*;
 use query_params::*;
+use help::*;
 use routes::{chart_data::*, transitions::*};
 
 /// Astrologic engine config
