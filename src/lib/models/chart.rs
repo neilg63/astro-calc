@@ -2,7 +2,7 @@ use chrono::*;
 use ::serde::{Serialize, Deserialize};
 use super::{geo_pos::*, general::*};
 use super::super::{julian_date::{julian_day_to_datetime}};
-
+/* 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Variant {
   num: u8, // ayanamsha ref number
@@ -175,7 +175,7 @@ impl Subject {
     }
   }
 
-}
+} */
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ITime {
@@ -231,9 +231,8 @@ impl ITime {
       week_day_num
     }
   }
-
 }
-
+/* 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum MixedValue {
   StringVal(String),
@@ -355,3 +354,4 @@ impl AstroChart {
   }
 
 }
+*/

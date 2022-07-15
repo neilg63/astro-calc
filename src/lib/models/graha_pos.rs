@@ -2,7 +2,6 @@ use serde::{Serialize, Deserialize};
 use libswe_sys::swerust::{handler_swe07::{PhenoUtResult}};
 use super::{general::{LngLat, ToLngLat, LngLatKey, ToLngLatKey}};
 use super::super::{julian_date::*, traits::*};
-use super::super::super::extensions::swe::{AltitudeSet, azalt};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BodyPos {

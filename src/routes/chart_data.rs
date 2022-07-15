@@ -1,7 +1,7 @@
 
 use std::{thread, time};
 use serde_json::*;
-use super::super::lib::{core::*,  transitions::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*, general::*}, utils::{converters::*}, settings::{ayanamshas::{match_ayanamsha_key}}};
+use super::super::lib::{core::*,  transitions::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*, general::*}, utils::{converters::*}, settings::{ayanamshas::{match_ayanamsha_key}}, planet_stations::{match_all_nextprev_planet_stations, BodySpeedSet}};
 use actix_web::{get, Responder,web::{self} };
 use super::super::lib::julian_date::{current_datetime_string, current_year};
 use super::super::{query_params::*};
@@ -23,10 +23,10 @@ struct ChartDataResult {
   #[serde(rename="progressItems",skip_serializing_if = "Vec::is_empty")]
   progress_items: Vec<ProgressItemSet>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  pheno: Vec<PhenoItem>
+  pheno: Vec<PhenoItem>,
+  #[serde(rename="planetStations",skip_serializing_if = "Vec::is_empty")]
+  planet_stations: Vec<BodySpeedSet>
 }
-
-
 
 #[get("/positions")]
 async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
@@ -85,6 +85,7 @@ pub async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responde
   let eq: u8 = params.eq.clone().unwrap_or(2); // 0 ecliptic, 1 equatorial, 2 both
   let show_pheno_inline = eq == 4;
   let show_pheno_below = !show_pheno_inline && params.ph.clone().unwrap_or(0) > 0;
+  let show_planet_stations = eq >= 3 || show_pheno_below;
   let p2_ago: u8 = params.p2ago.clone().unwrap_or(1);
   let p2_start_year = current_year() as u32 - p2_ago as u32;
   let p2_years: u8 = params.p2yrs.clone().unwrap_or(3);
@@ -130,9 +131,11 @@ pub async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responde
     _=> FlexiBodyPos::Extended(data),
   };
   thread::sleep(micro_interval);
-  
+  let pl_keys = vec!["ma", "me", "ju", "ve", "sa", "ur", "ne", "pl"];
+  let station_keys: Vec<&str> = keys.iter().filter(|k| pl_keys.contains(&k.as_str())).map(|k| k.as_str()).collect();
+  let planet_stations = if show_planet_stations { match_all_nextprev_planet_stations(date.jd, station_keys, iso_mode) } else{ vec![] };
   //web::Json(json!({ "valid": valid, "date": date, "geo": geo, "bodies": bodies, "topoVariants": topo_variants, "house": house_data, "ayanamshas": ayanamshas, "transitions": transitions, "progressItems": p2, "pheno": pheno_items }))
-  web::Json(json!( ChartDataResult{ valid, date, geo, bodies, topo_variants, house, ayanamshas, transitions, progress_items: p2, pheno: pheno_items}))
+  web::Json(json!( ChartDataResult{ valid, date, geo, bodies, topo_variants, house, ayanamshas, transitions, progress_items: p2, pheno: pheno_items, planet_stations }))
 }
 
 #[get("/progress")]

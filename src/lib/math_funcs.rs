@@ -1,6 +1,6 @@
-use super::models::{general::*, geo_pos::*, general::{LngLat}};
+/* use super::models::{general::*, geo_pos::*, general::{LngLat}};
 use super::settings::varga_values::*;
-use super::utils::minmax::*;
+use super::utils::minmax::*; */
 use super::julian_date::datetime_to_julian_day;
 
 pub fn get_year_length(year_type: &str) -> f64 {
@@ -22,6 +22,38 @@ pub fn to_progression_jd(
   source_jd + projected_duration
 }
 
+pub fn calc_progress_day_jds_by_year(source_jd: f64, start_year: u32, years: u16, per_year: u8) -> Vec<(f64, f64)> {
+  let year_start_str = format!("{}-01-01T00:00:00", start_year);
+  let start_jd = datetime_to_julian_day(year_start_str.as_str());
+  let start_p2_jd = to_progression_jd(source_jd, start_jd, "tropical");
+  let mut items: Vec<(f64, f64)> = Vec::new();
+  let interval = 1f64 / per_year as f64;
+  let interval_yr = get_year_length("tropical");
+  let num_items = years as u32 * per_year as u32;
+  for i in 0..num_items {
+    let ref_jd = start_p2_jd + (interval * i as f64);
+    let ref_year_jd = start_jd + (interval_yr * i as f64);
+    items.push((ref_jd, ref_year_jd));
+  }
+  items
+}
+
+pub fn calc_opposite(lng: f64) -> f64 {
+  (lng + 180f64) % 360f64
+}
+
+pub fn adjust_lng_by_body_key(key: &str, lng: f64) -> f64 {
+  match key {
+    "ke" => calc_opposite(lng),
+    _ => lng,
+  }
+}
+
+pub fn subtract_360(lng: f64, offset: f64) -> f64 {
+  (lng + 360f64 - offset) % 360f64
+}
+
+/* 
 pub fn match_house_num(lng: f64, houses: Vec<f64>) -> u8 {
   let len = houses.len();
   let min_val = if len > 0 { min_f64(houses.clone()) } else { 0f64 };
@@ -60,10 +92,6 @@ pub fn calc_varga_value(lng: f64, num: u16) -> f64 {
   (lng * num as f64) % 360f64
 }
 
-pub fn subtract_360(lng: f64, offset: f64) -> f64 {
-  (lng + 360f64 - offset) % 360f64
-}
-
 pub fn calc_all_vargas(lng: f64) -> Vec<NumValue> {
   all_varga_items().into_iter().map(|v| {
     let value = calc_varga_value(lng, v.num);
@@ -96,20 +124,6 @@ pub fn calc_inclusive_sign_positions(sign1: u8, sign2: u8) -> u8 {
 pub fn calc_inclusive_nakshatras(pos_1: u8, pos_2: u8) -> u8 {
   calc_inclusive_twelfths(pos_1 as u16, pos_2 as u16) as u8
 }
-
-/* pub fn mid_point_to_surface(coord1: GeoPos, coord2: GeoPos) -> GeoPos {
-  let c1 = geo_to_radians(coord1);
-  let c2 = geo_to_radians(coord2);
-  let bx = Math.cos(c2.lat) * Math.cos(c2.lng - c1.lng);
-  let by = Math.cos(c2.lat) * Math.sin(c2.lng - c1.lng);
-  let mid_lat = Math.atan2(
-    Math.sin(c1.lat) + Math.sin(c2.lat),
-    Math.sqrt((Math.cos(c1.lat) + bx) * (Math.cos(c1.lat) + bx) + by * by),
-  );
-  let mid_lng = c1.lng + Math.atan2(by, Math.cos(c1.lat) + bx);
-  let mid_alt = (c1.alt + c2.alt) / 2f64;
-  GeoPos::new( to_degrees(mid_lat), lng: to_degrees(mid_lng), mid_alt)
-} */
 
 pub fn to_360(lng: f64) -> f64 {
   if lng >= 0f64 { lng + 180f64 }  else { 180f64 - lng }
@@ -148,30 +162,18 @@ pub fn median_lat_lng(coord1: GeoPos, coord2: GeoPos) -> LngLat {
     median_lat(coord1.lat, coord2.lat),
   )
 }
+ */
 
-pub fn calc_progress_day_jds_by_year(source_jd: f64, start_year: u32, years: u16, per_year: u8) -> Vec<(f64, f64)> {
-  let year_start_str = format!("{}-01-01T00:00:00", start_year);
-  let start_jd = datetime_to_julian_day(year_start_str.as_str());
-  let start_p2_jd = to_progression_jd(source_jd, start_jd, "tropical");
-  let mut items: Vec<(f64, f64)> = Vec::new();
-  let interval = 1f64 / per_year as f64;
-  let interval_yr = get_year_length("tropical");
-  let num_items = years as u32 * per_year as u32;
-  for i in 0..num_items {
-    let ref_jd = start_p2_jd + (interval * i as f64);
-    let ref_year_jd = start_jd + (interval_yr * i as f64);
-    items.push((ref_jd, ref_year_jd));
-  }
-  items
-}
-
-pub fn calc_opposite(lng: f64) -> f64 {
-  (lng + 180f64) % 360f64
-}
-
-pub fn adjust_lng_by_body_key(key: &str, lng: f64) -> f64 {
-  match key {
-    "ke" => calc_opposite(lng),
-    _ => lng,
-  }
-}
+/* pub fn mid_point_to_surface(coord1: GeoPos, coord2: GeoPos) -> GeoPos {
+  let c1 = geo_to_radians(coord1);
+  let c2 = geo_to_radians(coord2);
+  let bx = Math.cos(c2.lat) * Math.cos(c2.lng - c1.lng);
+  let by = Math.cos(c2.lat) * Math.sin(c2.lng - c1.lng);
+  let mid_lat = Math.atan2(
+    Math.sin(c1.lat) + Math.sin(c2.lat),
+    Math.sqrt((Math.cos(c1.lat) + bx) * (Math.cos(c1.lat) + bx) + by * by),
+  );
+  let mid_lng = c1.lng + Math.atan2(by, Math.cos(c1.lat) + bx);
+  let mid_alt = (c1.alt + c2.alt) / 2f64;
+  GeoPos::new( to_degrees(mid_lat), lng: to_degrees(mid_lng), mid_alt)
+} */
