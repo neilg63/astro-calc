@@ -75,7 +75,7 @@ Query string parameters:
 
 ### GET /chart-data
 
-Rich configurable set of astrological data for a given time and geolocation. May power astrological charts with extra transitions and ayanamsha variants, progress synastry positions (P2) and house systems.
+Rich configurable set of astrological data for a given time and geolocation. May power astrological charts with extra transitions and ayanamsha variants, progress synastry positions (P2) and house systems. Previous and next planet stations (retrograde motion switches) will be shown if eq is 3 or 4 or ph is 1.
 
 Query string parameters:
 
@@ -110,9 +110,18 @@ Query string parameters:
 
 Query string parameters:
 
-* dateref: current date-time
+* dt: current date-time
 * loc: current lat,lng(,alt) coordinates
 * days: number of days worth of transitions, default 28, e.g. 366 will return a whole year")
+* iso: 0 = show julian days (default), 1 = show ISO datetime UTC
+
+### GET /planet-stations
+
+Show retrograde start, retrograde peak, retrograde end and forward peak speeds of the core planets over a specified period:
+
+* dt: start date-time or year only, between 1900 and 2050
+* dt2: end date-time or year only, between 1900 and 2050
+* bodies: comma-separated list of required planets, all or core, but may only include me: Mercury, ve: Venus, ma: Mars, ju: Jupiter, sa: Saturn, ur: Uranus, ne: Neptune and pl: Pluto
 * iso: 0 = show julian days (default), 1 = show ISO datetime UTC
 
 ### GET /transposed-transitions

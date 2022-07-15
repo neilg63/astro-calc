@@ -11,7 +11,6 @@ impl JulianDayEpoch {
     JulianDayEpoch::Days as i64 as f64 + JulianDayEpoch::Hours as i64 as f64 / 24f64
   }
 }
-
 /**
  * Utility function to convert any ISO-8601-like date string to a Kronos NaiveDateTime object
  * This function accepts YYYY-mm-dd HH:MM:SS separated by a space or letter T and with or without hours, minutes or seconds.
@@ -21,7 +20,15 @@ pub fn iso_string_to_datetime(dt: &str) -> NaiveDateTime {
   let dt_base = if dt.contains('.') { dt.split(".").next().unwrap() } else { dt };
   let clean_dt = dt_base.replace("T", " ").trim().to_string();
   let mut dt_parts = clean_dt.split(" ");
-  let date_part = if clean_dt.clone().contains(" ") { dt_parts.next().unwrap().to_string() } else { clean_dt.clone() };
+  let mut date_part = if clean_dt.clone().contains(" ") { dt_parts.next().unwrap().to_string() } else { clean_dt.clone() };
+  let mut date_parts: Vec<&str> = if date_part.len() > 1 { date_part.split("-").into_iter().collect() } else { vec!("2000", "01", "01") };
+  if date_parts.len() < 2 { 
+    date_parts.push("01");
+   }
+  if date_parts.len() < 3 { 
+    date_parts.push("01");
+  }
+  date_part = format!("{}-{}-{}", date_parts[0], date_parts[1], date_parts[2]);
   let time_part = if clean_dt.clone().contains(" ") { dt_parts.next().unwrap().to_string() } else { "".to_string() };
   let mut time_parts = if time_part.len() > 1 { time_part.split(":").into_iter().collect() } else { vec!("00", "00", "00") };
   let num_time_parts = time_parts.len();

@@ -89,7 +89,7 @@ impl BodySpeedSet {
 	}
 }
 
-pub fn match_nextprev_planet_stations(key: &str, ref_jd: f64) -> Vec<BodySpeed> {
+pub fn match_planet_stations_range(key: &str, ref_jd: f64, end_jd: f64) -> Vec<BodySpeed> {
     let mut items:Vec<BodySpeed> = vec![];
 	let ref_rows:Vec<(f64, f64, f64, u8)> = match key {
         "me" => PLANETARY_STATIONS_ME,
@@ -102,14 +102,22 @@ pub fn match_nextprev_planet_stations(key: &str, ref_jd: f64) -> Vec<BodySpeed> 
 				"pl" => PLANETARY_STATIONS_PL,
         _ => PLANETARY_STATIONS_EA,
     }.iter().cloned().collect();
+		// NB data sources are in descending chronological order
     let num_rows = ref_rows.len();
 			if ref_rows.len() > 0 {
-			let index_match = ref_rows.clone().into_iter().position(|r| r.0 <= ref_jd);
+			let target_jd = if end_jd < ref_jd { ref_jd } else { end_jd };
+			let index_match = ref_rows.clone().into_iter().position(|r| r.0 <= target_jd);
 			if let Some(index) = index_match {
 					let start_pos = index as i32 - 4i32;
 					
 					let start_index = if start_pos < 0 { 0usize } else { start_pos as usize };
 					let mut end_index = index + 4;
+					if end_jd > ref_jd {
+						let end_index_match = ref_rows.clone().into_iter().position(|r| r.0 < ref_jd);
+						if let Some(end_im) = end_index_match {
+							end_index = end_im;
+						}
+					}
 					if end_index >= num_rows {
 							end_index = num_rows - 1;
 					}
@@ -123,10 +131,23 @@ pub fn match_nextprev_planet_stations(key: &str, ref_jd: f64) -> Vec<BodySpeed> 
     items.into_iter().rev().collect()
 }
 
+pub fn match_nextprev_planet_stations(key: &str, ref_jd: f64) -> Vec<BodySpeed> {
+	match_planet_stations_range(key, ref_jd, 0f64)
+}
+
 pub fn match_all_nextprev_planet_stations(ref_jd: f64, bodies: Vec<&str>, iso_mode: bool) -> Vec<BodySpeedSet> {
 	let mut items: Vec<BodySpeedSet> = vec![];
 	for key in bodies {
 		let rows = match_nextprev_planet_stations(key, ref_jd);
+		items.push(BodySpeedSet::new(key, rows, iso_mode));
+	}
+	items
+}
+
+pub fn match_all_planet_stations_range(ref_jd: f64, end_jd: f64, bodies: Vec<&str>, iso_mode: bool) -> Vec<BodySpeedSet> {
+	let mut items: Vec<BodySpeedSet> = vec![];
+	for key in bodies {
+		let rows = match_planet_stations_range(key, ref_jd, end_jd);
 		items.push(BodySpeedSet::new(key, rows, iso_mode));
 	}
 	items
