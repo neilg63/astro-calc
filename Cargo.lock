@@ -223,6 +223,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "astro_calc"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "chrono",
+ "clap",
+ "libc",
+ "libmath",
+ "libswe-sys",
+ "num",
+ "num-derive",
+ "num-traits",
+ "ordered-float",
+ "rustc-serialize",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "strum",
+ "strum_macros",
+]
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1095,28 +1117,6 @@ name = "regex-syntax"
 version = "0.6.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49b3de9ec5dc0a3417da371aab17d729997c15010e7fd24ff707773a33bddb64"
-
-[[package]]
-name = "rsetest"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "chrono",
- "clap",
- "libc",
- "libmath",
- "libswe-sys",
- "num",
- "num-derive",
- "num-traits",
- "ordered-float",
- "rustc-serialize",
- "serde",
- "serde_derive",
- "serde_json",
- "strum",
- "strum_macros",
-]
 
 [[package]]
 name = "rustc-serialize"
