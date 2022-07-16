@@ -49,8 +49,6 @@ struct AppData {
   path: String,
 }
 
-
-
 #[get("/jd/{dateref}")]
 async fn date_info(dateref: web::Path<String>) -> impl Responder {
   let date_str = dateref.as_str();
@@ -140,15 +138,20 @@ async fn date_now() -> impl Responder {
 }
 
 async fn welcome() -> impl Responder {
-  web::Json(json!({ "message": "Welcome to Astro API", "time": DateInfo::now(), "routes": endpoint_help() }))
+  web::Json(json!({ "message": "Welcome to Astro API", "time": DateInfo::now(), "routes": endpoint_help(), "ephemerisPath": get_ephe_path() }))
 }
 
 async fn welcome_not_configured() -> impl Responder {
-  web::Json( json!({ "valid": false, "message": "Welcome to Astro API", "error": "Incorrect ephemeris path", "time": DateInfo::now() }))
+  web::Json( json!({ "valid": false, "message": "Welcome to Astro API", "error": "Incorrect ephemeris path", "time": DateInfo::now(), "ephemerisPath": get_ephe_path() }))
 }
 
 async fn route_not_found() -> impl Responder {
   web::Json( json!({ "valid": false, "error": "route not found" }))
+}
+
+fn get_ephe_path() -> String {
+  let args = Args::parse();
+  args.ephemeris
 }
 
 #[actix_web::main]
