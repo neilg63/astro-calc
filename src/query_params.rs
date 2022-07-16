@@ -31,6 +31,7 @@ pub struct InputOptions {
   pub amode: Option<String>, // apply referenced sidereal type (ayanamsha) to all longitudes
   pub sid: Option<u8>, // 0 tropical longitudes, 1 sidereal longitudes
   pub hsys: Option<String>, // comma-separated list of letters representing house systems to be returned. Defaults to W for whole house system
+  pub retro: Option<u8>, // show planet stations (retrograde, peak), 0 no, 1 yes
   pub iso: Option<u8>, // 0 show JD, 1 show ISO UTC
   pub tzs: Option<i16>, // offset in seconds from UTC
 }
