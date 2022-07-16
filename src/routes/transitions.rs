@@ -3,10 +3,11 @@ use serde_json::*;
 use super::super::lib::{transitions::*, transposed_transitions::{calc_transposed_graha_transitions_from_source_refs_topo, calc_transposed_graha_transitions_from_source_refs_geo}, models::{geo_pos::*, date_info::*, general::*}, utils::{converters::*}};
 use actix_web::{get, Responder,web::{self} };
 use super::super::lib::julian_date::{current_datetime_string };
-use super::super::{query_params::*};
+use super::super::{query_params::*, reset_ephemeris_path};
 
 #[get("/transitions")]
 async fn list_transitions(params: web::Query<InputOptions>) -> impl Responder {
+  reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(30);
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
@@ -27,6 +28,7 @@ async fn list_transitions(params: web::Query<InputOptions>) -> impl Responder {
 
 #[get("/sun-transitions")]
 async fn list_sun_transitions(params: web::Query<InputOptions>) -> impl Responder {
+  reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(30);  
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
@@ -43,6 +45,7 @@ async fn list_sun_transitions(params: web::Query<InputOptions>) -> impl Responde
 
 #[get("/pheno")]
 async fn pheno_data(params: web::Query<InputOptions>) -> impl Responder {
+  reset_ephemeris_path();
   let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
   let def_keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa"];
   let key_string: String = params.bodies.clone().unwrap_or("".to_string());
@@ -55,6 +58,7 @@ async fn pheno_data(params: web::Query<InputOptions>) -> impl Responder {
 
 #[get("/transposed-transitions")]
 async fn body_transposed_transitions_range(params: web::Query<InputOptions>) -> impl Responder {
+  reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(50);
   let dateref: String = params.dt2.clone().unwrap_or(current_datetime_string());
   let loc: String = params.loc2.clone().unwrap_or("0,0".to_string());
@@ -79,6 +83,7 @@ async fn body_transposed_transitions_range(params: web::Query<InputOptions>) -> 
 
 #[get("/test-transitions")]
 async fn test_transitions(params: web::Query<InputOptions>) -> impl Responder {
+  reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(30);
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };

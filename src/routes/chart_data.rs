@@ -6,6 +6,7 @@ use actix_web::{get, Responder,web::{self} };
 use super::super::lib::julian_date::{current_datetime_string, current_year};
 use super::super::{query_params::*};
 use serde::{Serialize, Deserialize};
+use super::super::{reset_ephemeris_path};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct ChartDataResult {
@@ -30,6 +31,7 @@ struct ChartDataResult {
 
 #[get("/positions")]
 async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
+  reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(20);
   let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
@@ -66,6 +68,7 @@ async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
 
 #[get("/chart-data")]
 pub async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responder {
+  reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(50);
   let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
@@ -140,6 +143,7 @@ pub async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responde
 
 #[get("/progress")]
 async fn bodies_progress(params: web::Query<InputOptions>) -> impl Responder {
+  reset_ephemeris_path();
   let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
