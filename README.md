@@ -75,7 +75,7 @@ Query string parameters:
 
 ### GET /chart-data
 
-Rich configurable set of astrological data for a given time and geolocation. May power astrological charts with extra transitions and ayanamsha variants, progress synastry positions (P2) and house systems. Previous and next planet stations (retrograde motion switches) will be shown if eq is 3 or 4 or ph is 1.
+Rich configurable set of astrological data for a given time and geolocation. May power astrological charts with extra transitions and ayanamsha variants, progress synastry positions (P2) and house systems. Previous and next planet stations (retrograde motion switches) will be shown if retro is 1.
 
 Query string parameters:
 
@@ -92,6 +92,7 @@ Query string parameters:
 * ph: 0 = no extra phenomena unless eq == 4, 1 = show planetary phenomena for the referenced time unless it is shown inline with celestial body data.
 * hsys: Comma-separated list of house system letters or `all` for all systems, default W (whole house system)
 * aya: Comma-separated list of available ayanamshas (see below). These are added as separate data-set and should be applied in a post processing stage via simple subtraction from the lng, ascendant or rectAscension values, which are always tropical (they may automatically applied in /positions)
+* retro: 1: show retrograde and peak stations of the main planets, 0: do not show planet stations
 * p2: include progress synastry longitudes based on 1 day = 1 year from referenced time. Progress days since the historic chart data is mapped to years.
 * p2yrs: Number of years to capture for P2 data
 * p2ago: Number of years ago for the P2 start year
@@ -231,3 +232,25 @@ Query string parameters:
 * sa, sassanian: Sassanian
 * us, ushashashi: Sassanian
 * jb, jnbhasin: Jnbhasin
+
+NB: Only the simplified /positions endpoint let you apply ayanamshas via the sid=1 option as required by many astronomers. For /chart-data and /progress you may subtract the required ayanamsha from the longitude, ascendant, descendant and right ascension. This is much more efficient than letting the underlying Swiss Ephemeris engine do it for you. The data sets may include the current ayanamsha values. To recalculate in javascript:
+
+```
+const subtract360 = (lng, value) => (lng + 360 - value) % 360;
+const adjustedLongitude = subtract360(tropicalLongitude);
+```
+
+Julian day to unix time:
+```
+const julianDayToUnixTime = (jd = 0) => {
+  return (jd - 2440587.5) * 86400 + tzOffset : 0;
+};
+
+const julianDayToTimestampMs = (jd = 0) => {
+  return julianDayToUnixTime(jd) * 1000;
+};
+
+const jd = 2443687.9401592254;
+
+const localeJsDate = new Date( julianDayToTimestampMs(jd) )
+```
