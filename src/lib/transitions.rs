@@ -458,7 +458,7 @@ pub fn next_set_normal(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
 
 pub fn next_mc_normal(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
   let value = next_mc(tjd_ut, ipl, lat, lng);
-  if value >= 0f64 { 
+  if value >= 1f64 { 
     value
   } else {
     let rise_n = rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::rise_normal());
@@ -469,7 +469,7 @@ pub fn next_mc_normal(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
 
 pub fn next_ic_normal(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
   let value = next_ic(tjd_ut, ipl, lat, lng);
-  if value >= 0f64 { 
+  if value >= 1f64 { 
     value
   } else {
     let set_n = rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::set_normal());
