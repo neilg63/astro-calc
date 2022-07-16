@@ -1,9 +1,9 @@
 use std::{thread, time};
 use serde_json::*;
-use super::super::lib::{transitions::*, transposed_transitions::{calc_transposed_graha_transitions_from_source_refs_topo, calc_transposed_graha_transitions_from_source_refs_geo}, models::{geo_pos::*, date_info::*, general::*}, utils::{converters::*}};
+use super::super::lib::{julian_date::{current_datetime_string},traits::{FromKey},transitions::*, transposed_transitions::{calc_transposed_graha_transitions_from_source_refs_topo, calc_transposed_graha_transitions_from_source_refs_geo}, models::{geo_pos::*, date_info::*, general::*}, utils::{converters::*},settings::{graha_values::*}};
 use actix_web::{get, Responder,web::{self} };
-use super::super::lib::julian_date::{current_datetime_string };
 use super::super::{query_params::*, reset_ephemeris_path};
+use libswe_sys::sweconst::{Bodies};
 
 #[get("/transitions")]
 async fn list_transitions(params: web::Query<InputOptions>) -> impl Responder {
@@ -102,4 +102,25 @@ async fn test_transitions(params: web::Query<InputOptions>) -> impl Responder {
   let alt_transition_sets = FlexiValueSet::FlexiValues(alt_transition_sets_jd.iter().map(|vs| vs.as_flexi_values(iso_mode)).collect());
   thread::sleep(micro_interval);
   web::Json(json!({ "valid": valid, "date": date, "geo": geo, "transitionSets": transition_sets, "altTransitionets": alt_transition_sets }))
+}
+
+#[get("/test-mc")]
+async fn test_mcs(params: web::Query<InputOptions>) -> impl Responder {
+  reset_ephemeris_path();
+  let micro_interval = time::Duration::from_millis(30);
+  let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
+  let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
+  let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+  let date = DateInfo::new(dateref.to_string().as_str());
+  let def_keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa"];
+  let key_string: String = params.bodies.clone().unwrap_or("".to_string());
+  let keys = body_keys_str_to_keys_or(key_string, def_keys);
+  let mut mcs: Vec<KeyNumValue> = vec![];
+  for key in keys {
+    let mc = next_mc(date.jd, Bodies::from_key(key.as_str()), geo.lat, geo.lng);
+    mcs.push(KeyNumValue::new(key.as_str(), mc));
+  }
+  let valid = mcs.len() > 0;
+  thread::sleep(micro_interval);
+  web::Json(json!({ "valid": valid, "date": date, "geo": geo, "values": mcs }))
 }
