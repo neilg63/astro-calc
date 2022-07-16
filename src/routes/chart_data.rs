@@ -1,4 +1,3 @@
-
 use std::{thread, time};
 use serde_json::*;
 use super::super::lib::{core::*,  transitions::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*, general::*}, utils::{converters::*}, settings::{ayanamshas::{match_ayanamsha_key}}, planet_stations::{match_all_nextprev_planet_stations, BodySpeedSet}};
@@ -88,7 +87,7 @@ pub async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responde
   let eq: u8 = params.eq.clone().unwrap_or(2); // 0 ecliptic, 1 equatorial, 2 both
   let show_pheno_inline = eq == 4;
   let show_pheno_below = !show_pheno_inline && params.ph.clone().unwrap_or(0) > 0;
-  let show_planet_stations = eq >= 3 || show_pheno_below;
+  let show_planet_stations = params.retro.clone().unwrap_or(0) > 0;
   let p2_ago: u8 = params.p2ago.clone().unwrap_or(1);
   let p2_start_year = current_year() as u32 - p2_ago as u32;
   let p2_years: u8 = params.p2yrs.clone().unwrap_or(3);

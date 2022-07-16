@@ -104,7 +104,7 @@ async fn test_transitions(params: web::Query<InputOptions>) -> impl Responder {
   web::Json(json!({ "valid": valid, "date": date, "geo": geo, "transitionSets": transition_sets, "altTransitionets": alt_transition_sets }))
 }
 
-#[get("/test-mc")]
+#[get("/test-swe-mc")]
 async fn test_mcs(params: web::Query<InputOptions>) -> impl Responder {
   reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(30);
@@ -116,11 +116,17 @@ async fn test_mcs(params: web::Query<InputOptions>) -> impl Responder {
   let key_string: String = params.bodies.clone().unwrap_or("".to_string());
   let keys = body_keys_str_to_keys_or(key_string, def_keys);
   let mut mcs: Vec<KeyNumValue> = vec![];
+  let mut num_valid: usize = 0;
   for key in keys {
     let mc = next_mc(date.jd, Bodies::from_key(key.as_str()), geo.lat, geo.lng);
     mcs.push(KeyNumValue::new(key.as_str(), mc));
+    if mc >= 0f64 { 
+      num_valid += 1;
+    }
   }
-  let valid = mcs.len() > 0;
+  let num_items = mcs.len();
+  let valid = num_valid == num_items && num_items > 0;
+  let desc = "Tests the native Swiss Ephemeris implementation with MC/IC flags, known to be buggy on some platforms. In production, mid point between rise and set is used. Where an object does not set or rise, the MC and IC are calculated by sampling max and min altitdues.";
   thread::sleep(micro_interval);
-  web::Json(json!({ "valid": valid, "date": date, "geo": geo, "values": mcs }))
+  web::Json(json!({ "valid": valid, "description": desc, "date": date, "geo": geo, "values": mcs }))
 }
