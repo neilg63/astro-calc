@@ -194,6 +194,7 @@ async fn main()  -> std::io::Result<()> {
           .service(pheno_data)
           .service(list_transitions)
           .service(test_transitions)
+          .service(test_mcs)
           .service(body_transposed_transitions_range)
           .service(planet_stations_progress)
           .route("/{sec1}", web::get().to(route_not_found))
