@@ -97,6 +97,7 @@ impl PositionInfo {
 
 #[get("/planet-stations")]
 async fn planet_stations_progress(params: web::Query<InputOptions>) -> impl Responder {
+  reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(30);  
   let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
   let def_keys = vec!["me", "ve", "ma", "ju", "sa", "ur", "ne", "pl"];
@@ -114,6 +115,7 @@ async fn planet_stations_progress(params: web::Query<InputOptions>) -> impl Resp
 
 #[get("/p2")]
 async fn progress_synastry(params: web::Query<InputOptions>) -> impl Responder {
+  reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(30);  
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
@@ -138,20 +140,25 @@ async fn date_now() -> impl Responder {
 }
 
 async fn welcome() -> impl Responder {
-  web::Json(json!({ "message": "Welcome to Astro API", "time": DateInfo::now(), "routes": endpoint_help(), "ephemerisPath": get_ephe_path() }))
+  web::Json(json!({ "message": "Welcome to Astro API", "time": DateInfo::now(), "routes": endpoint_help(), "ephemerisPath": get_ephemeris_path() }))
 }
 
 async fn welcome_not_configured() -> impl Responder {
-  web::Json( json!({ "valid": false, "message": "Welcome to Astro API", "error": "Incorrect ephemeris path", "time": DateInfo::now(), "ephemerisPath": get_ephe_path() }))
+  web::Json( json!({ "valid": false, "message": "Welcome to Astro API", "error": "Incorrect ephemeris path", "time": DateInfo::now(), "ephemerisPath": get_ephemeris_path() }))
 }
 
 async fn route_not_found() -> impl Responder {
   web::Json( json!({ "valid": false, "error": "route not found" }))
 }
 
-fn get_ephe_path() -> String {
+fn get_ephemeris_path() -> String {
   let args = Args::parse();
   args.ephemeris
+}
+
+pub fn reset_ephemeris_path() {
+  let ep = get_ephemeris_path();
+  set_ephe_path(ep.as_str());
 }
 
 #[actix_web::main]
