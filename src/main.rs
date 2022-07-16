@@ -157,8 +157,10 @@ fn get_ephemeris_path() -> String {
 }
 
 pub fn reset_ephemeris_path() {
+  let micro_interval = time::Duration::from_millis(10);
   let ep = get_ephemeris_path();
   set_ephe_path(ep.as_str());
+  thread::sleep(micro_interval);
 }
 
 #[actix_web::main]
