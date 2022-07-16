@@ -457,34 +457,44 @@ pub fn next_set_normal(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
 }
 
 pub fn next_mc_normal(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
-  let rise_n = rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::rise_normal());
-  let set_n = rise_trans(rise_n, ipl, lat, lng, TransitionParams::set_normal());
-  (set_n + rise_n) / 2f64
+  let value = next_mc(tjd_ut, ipl, lat, lng);
+  if value >= 0f64 { 
+    value
+  } else {
+    let rise_n = rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::rise_normal());
+    let set_n = rise_trans(rise_n, ipl, lat, lng, TransitionParams::set_normal());
+    (set_n + rise_n) / 2f64
+  }
 }
 
 pub fn next_ic_normal(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
-  let set_n = rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::set_normal());
-  let next_rise_n = rise_trans(set_n, ipl, lat, lng, TransitionParams::rise_normal());
-  (next_rise_n + set_n) / 2f64
+  let value = next_ic(tjd_ut, ipl, lat, lng);
+  if value >= 0f64 { 
+    value
+  } else {
+    let set_n = rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::set_normal());
+    let next_rise_n = rise_trans(set_n, ipl, lat, lng, TransitionParams::rise_normal());
+    (next_rise_n + set_n) / 2f64
+  }
 }
 
 pub fn next_mc(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
   rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::mc())
 }
 
-pub fn next_mc_q(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, rise_jd: f64) -> f64 {
+/* pub fn next_mc_q(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, rise_jd: f64) -> f64 {
 let set_jd = rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::Set as i32);
 ((set_jd - rise_jd) / 2f64) + rise_jd
-}
+} */
 
 pub fn next_ic(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64) -> f64 {
   rise_trans(tjd_ut, ipl, lat, lng, TransitionParams::ic())
 }
 
-pub fn next_ic_q(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, set_jd: f64) -> f64 {
+/* pub fn next_ic_q(tjd_ut: f64, ipl: Bodies, lat: f64, lng: f64, set_jd: f64) -> f64 {
   let next_rise_jd = rise_trans(tjd_ut + 1f64, ipl, lat, lng, TransitionParams::Rise as i32);
   ((next_rise_jd - set_jd) / 2f64) + set_jd
-}
+} */
 
 pub fn start_jd_geo(jd: f64, lng: f64) -> f64 {
   let offset = (0f64 - lng / 15f64) / 24f64;
