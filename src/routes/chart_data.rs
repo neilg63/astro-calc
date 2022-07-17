@@ -28,6 +28,21 @@ struct ChartDataResult {
   planet_stations: Vec<BodySpeedSet>
 }
 
+fn to_ayanamsha_keys(params: &web::Query<InputOptions>, def_val: &str) -> (Vec<String>, String) {
+  let aya: String = params.aya.clone().unwrap_or(def_val.to_string());
+  
+  let aya_keys = match aya.as_str() {
+    "all" => vec![],
+    "core" => vec!["true_citra", "lahiri", "krishnamurti"],
+    _ => if aya.len() > 1 { aya.as_str().split(",").collect() } else { vec![] },
+  }.into_iter().map(|k| k.to_owned()).collect();
+  let mode = match aya.as_str() {
+    "all"  | "core" => aya,
+    _ => "keys".to_string(),
+  };
+  (aya_keys, mode)
+}
+
 #[get("/positions")]
 async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
   reset_ephemeris_path();
@@ -73,12 +88,7 @@ pub async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responde
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
   let show_transitions: bool = params.ct.clone().unwrap_or(0) > 0;
-  let aya: String = params.aya.clone().unwrap_or("true_citra".to_string());
-  let aya_keys: Vec<&str> = match aya.as_str() {
-    "all" => vec![],
-    "core" => vec!["true_citra", "lahiri"],
-    _ => aya.split(",").collect(),
-  };
+  let (aya_keys, aya_mode) = to_ayanamsha_keys(&params, "true_citra");
   let hsys_str = params.hsys.clone().unwrap_or("W".to_string());
   let match_all_houses = hsys_str.to_lowercase().as_str() == "all";
   let h_systems: Vec<char> = if match_all_houses { vec![] } else { match_house_systems_chars(hsys_str) };
@@ -116,9 +126,9 @@ pub async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responde
   }
   let valid = data.len() > 0;
   let house = if match_all_houses { get_all_house_systems(date.jd, geo) } else { get_house_systems(date.jd, geo, h_systems) } ;
-  let ayanamshas = match aya.as_str() {
+  let ayanamshas = match aya_mode.as_str() {
     "all" => get_all_ayanamsha_values(date.jd),
-    _ => get_ayanamsha_values(date.jd, aya_keys),
+    _ => get_ayanamsha_values(date.jd, to_str_refs(&aya_keys)),
   };
   
   let transition_jds: Vec<KeyNumValueSet> = if show_transitions { get_transition_sets(date.jd, to_str_refs(&keys), geo) } else { Vec::new() };
@@ -161,11 +171,16 @@ async fn bodies_progress(params: web::Query<InputOptions>) -> impl Responder {
   let keys = body_keys_str_to_keys_or(key_string, def_keys);
   let date = DateInfo::new(dateref.to_string().as_str());
   let geo_opt = if topo { Some(geo) } else { None };
+  let (aya_keys, aya_mode) = to_ayanamsha_keys(&params, "");
+  let ayanamshas = match aya_mode.as_str() {
+    "all" => get_all_ayanamsha_values(date.jd),
+    _ => get_ayanamsha_values(date.jd, to_str_refs(&aya_keys)),
+  };
   let data = calc_bodies_positions_jd(date.jd, to_str_refs(&keys), days_spanned, per_day_f64, geo_opt, eq, iso_mode);
   let frequency = if per_day_f64 < 1f64 { format!("{} days", day_span) } else { format!("{} per day", per_day_f64) };
   let coord_system = build_coord_system_label(eq, topo);
   thread::sleep(micro_interval);
-  web::Json(json!(json!({ "date": date, "geo": geo, "items": data, "num_samples": num_samples, "days": days, "frequency": frequency, "coordinateSystem": coord_system })))
+  web::Json(json!(json!({ "date": date, "geo": geo, "items": data, "num_samples": num_samples, "days": days, "frequency": frequency, "coordinateSystem": coord_system, "ayanamshas": ayanamshas })))
 }
 
 fn build_coord_system_label(eq: bool, topo: bool) -> String {
