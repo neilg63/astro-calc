@@ -233,7 +233,7 @@ Query string parameters:
 * us, ushashashi: Sassanian
 * jb, jnbhasin: Jnbhasin
 
-NB: Only the simplified /positions endpoint let you apply ayanamshas via the sid=1 option as required by many astronomers. For /chart-data and /progress you may subtract the required ayanamsha from the longitude, ascendant, descendant and right ascension. This is much more efficient than letting the underlying Swiss Ephemeris engine do it for you. The data sets may include the current ayanamsha values. To recalculate in javascript:
+NB: Only the simplified /positions endpoint lets you apply ayanamshas via the sid=1 option as required by many astronomers. For /chart-data and /progress you may subtract the required ayanamsha from the longitude, ascendant, descendant and right ascension. This is much more efficient than letting the underlying Swiss Ephemeris engine do it for you. The data sets may include the current ayanamsha values. To recalculate in javascript:
 
 ```
 const subtract360 = (lng, value) => (lng + 360 - value) % 360;
