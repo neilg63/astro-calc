@@ -1,6 +1,6 @@
 use chrono::*;
 use ::serde::{Serialize, Deserialize};
-use super::{geo_pos::*, general::*};
+// use super::{geo_pos::*, general::*};
 use super::super::{julian_date::{julian_day_to_datetime}};
 /* 
 #[derive(Serialize, Deserialize, Debug, Clone)]

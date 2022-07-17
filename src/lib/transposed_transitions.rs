@@ -2,8 +2,7 @@ use serde::{Serialize, Deserialize};
 use super::julian_date::*;
 use super::models::{geo_pos::*, graha_pos::*};
 use super::{models::{general::{KeyNumValue, KeyNumValueSet}}};
-use super::{core::{calc_altitude,calc_body_jd, calc_body_jd_geo, calc_body_jd_topo}, transitions::{TransitionSet, AltTransitionSet, get_pheno_result}};
-use super::super::extensions::swe::{set_topo};
+use super::{core::{calc_altitude, calc_body_jd_geo, calc_body_jd_topo}, transitions::{TransitionSet, AltTransitionSet, get_pheno_result}};
 
 const MINS_PER_DAY: i32 = 1440;
 
