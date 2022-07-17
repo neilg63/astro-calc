@@ -11,8 +11,8 @@ pub struct InputOptions {
   pub offset: Option<i32>, // offset is seconds from UTC
   pub bodies: Option<String>, // either a comma separated list of required 2-letter celestial body keys or body group keys
   pub topo: Option<u8>, // 0 = geocentric, 1 topocentric, 2 both, default 0
-  pub eq: Option<u8>, // 0 = ecliptic, 1 equatorial, 2 both, 3 with pheno data
-  pub ph: Option<u8>, // 0 = none (except via eq=4 in /chart-data), 1 = show pheno data
+  pub eq: Option<u8>, // 0 = ecliptic, 1 equatorial, 2 both, both 3 with altitude/azimuth, 4 with inline planetary phenomena
+  pub ph: Option<u8>, // 0 = none (except via eq=4 in /chart-data), 1 = show pheno(nema) as separate array
   pub days: Option<u16>, // duration in days where applicable
   pub pd: Option<u8>, // number per day, 2 => every 12 hours
   pub dspan: Option<u8>, // number per days per calculation
