@@ -1,7 +1,7 @@
 use std::{thread, time};
 use serde_json::*;
 use super::super::lib::{core::*,  transitions::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*, general::*}, utils::{converters::*}, settings::{ayanamshas::{match_ayanamsha_key}}, planet_stations::{match_all_nextprev_planet_stations, BodySpeedSet}};
-use actix_web::{get, Responder,web::{self} };
+use actix_web::{get, Responder,web::{Query, Json} };
 use super::super::lib::julian_date::{current_datetime_string, current_year};
 use super::super::{query_params::*};
 use serde::{Serialize, Deserialize};
@@ -28,26 +28,11 @@ struct ChartDataResult {
   planet_stations: Vec<BodySpeedSet>
 }
 
-fn to_ayanamsha_keys(params: &web::Query<InputOptions>, def_val: &str) -> (Vec<String>, String) {
-  let aya: String = params.aya.clone().unwrap_or(def_val.to_string());
-  
-  let aya_keys = match aya.as_str() {
-    "all" => vec![],
-    "core" => vec!["true_citra", "lahiri", "krishnamurti"],
-    _ => if aya.len() > 1 { aya.as_str().split(",").collect() } else { vec![] },
-  }.into_iter().map(|k| k.to_owned()).collect();
-  let mode = match aya.as_str() {
-    "all"  | "core" => aya,
-    _ => "keys".to_string(),
-  };
-  (aya_keys, mode)
-}
-
 #[get("/positions")]
-async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
+async fn body_positions(params: Query<InputOptions>) -> impl Responder {
   reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(20);
-  let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+  let date = to_date_object(&params);
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
   let aya: String = params.aya.clone().unwrap_or("true_citra".to_string());
@@ -57,7 +42,6 @@ async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
   let key_string: String = params.bodies.clone().unwrap_or("".to_string());
   let keys = body_keys_str_to_keys_or(key_string, def_keys);
   let eq: u8 = params.eq.clone().unwrap_or(2); // 0 ecliptic, 1 equatorial, 2 both
-  let date = DateInfo::new(dateref.to_string().as_str());
   let aya_key = match_ayanamsha_key(aya.as_str());
   let ayanamsha = get_ayanamsha_value(date.jd, aya.as_str());
   let aya_offset = if sidereal { ayanamsha } else { 0f64 };
@@ -77,14 +61,14 @@ async fn body_positions(params: web::Query<InputOptions>) -> impl Responder {
   let moon_transitions = calc_transition_moon(date.jd, geo).to_value_set(iso_mode);
   let coord_system = build_coord_system_label(eq > 0, topo > 0);
   thread::sleep(micro_interval);
-  web::Json(json!({ "valid": valid, "date": date, "geo": geo, "longitudes": longitudes, "ayanamsha": { "key": aya_key, "value": ayanamsha, "applied": sidereal }, "coordinateSystem": coord_system, "sunTransitions": sun_transitions, "moonTransitions": moon_transitions }))
+  Json(json!({ "valid": valid, "date": date, "geo": geo, "longitudes": longitudes, "ayanamsha": { "key": aya_key, "value": ayanamsha, "applied": sidereal }, "coordinateSystem": coord_system, "sunTransitions": sun_transitions, "moonTransitions": moon_transitions }))
 }
 
 #[get("/chart-data")]
-pub async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responder {
+pub async fn chart_data_flexi(params: Query<InputOptions>) -> impl Responder {
   reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(50);
-  let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+  let date = to_date_object(&params);
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
   let show_transitions: bool = params.ct.clone().unwrap_or(0) > 0;
@@ -105,7 +89,6 @@ pub async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responde
   let def_keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ur", "ne", "pl"];
   let key_string: String = params.bodies.clone().unwrap_or("".to_string());
   let keys = body_keys_str_to_keys_or(key_string, def_keys);
-  let date = DateInfo::new(dateref.to_string().as_str());
   let iso_mode: bool = params.iso.clone().unwrap_or(0) > 0;
   let data = match topo {
     1 => match eq {
@@ -147,13 +130,13 @@ pub async fn chart_data_flexi(params: web::Query<InputOptions>) -> impl Responde
   let station_keys: Vec<&str> = keys.iter().filter(|k| pl_keys.contains(&k.as_str())).map(|k| k.as_str()).collect();
   let planet_stations = if show_planet_stations { match_all_nextprev_planet_stations(date.jd, station_keys, iso_mode) } else{ vec![] };
   //web::Json(json!({ "valid": valid, "date": date, "geo": geo, "bodies": bodies, "topoVariants": topo_variants, "house": house_data, "ayanamshas": ayanamshas, "transitions": transitions, "progressItems": p2, "pheno": pheno_items }))
-  web::Json(json!( ChartDataResult{ valid, date, geo, bodies, topo_variants, house, ayanamshas, transitions, progress_items: p2, pheno: pheno_items, planet_stations }))
+  Json(json!( ChartDataResult{ valid, date, geo, bodies, topo_variants, house, ayanamshas, transitions, progress_items: p2, pheno: pheno_items, planet_stations }))
 }
 
 #[get("/progress")]
-async fn bodies_progress(params: web::Query<InputOptions>) -> impl Responder {
+async fn bodies_progress(params: Query<InputOptions>) -> impl Responder {
   reset_ephemeris_path();
-  let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+  let date = to_date_object(&params);
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
   let def_keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa", "ur", "ne", "pl", "ke"];
@@ -169,7 +152,6 @@ async fn bodies_progress(params: web::Query<InputOptions>) -> impl Responder {
   let days_spanned = if num_samples > 1000 { (1000f64 / per_day_f64) as u16 } else { days };
   let micro_interval = time::Duration::from_millis(20 + (num_samples / 4) as u64);
   let keys = body_keys_str_to_keys_or(key_string, def_keys);
-  let date = DateInfo::new(dateref.to_string().as_str());
   let geo_opt = if topo { Some(geo) } else { None };
   let (aya_keys, aya_mode) = to_ayanamsha_keys(&params, "");
   let ayanamshas = match aya_mode.as_str() {
@@ -180,7 +162,7 @@ async fn bodies_progress(params: web::Query<InputOptions>) -> impl Responder {
   let frequency = if per_day_f64 < 1f64 { format!("{} days", day_span) } else { format!("{} per day", per_day_f64) };
   let coord_system = build_coord_system_label(eq, topo);
   thread::sleep(micro_interval);
-  web::Json(json!(json!({ "date": date, "geo": geo, "items": data, "num_samples": num_samples, "days": days, "frequency": frequency, "coordinateSystem": coord_system, "ayanamshas": ayanamshas })))
+  Json(json!(json!({ "date": date, "geo": geo, "items": data, "num_samples": num_samples, "days": days, "frequency": frequency, "coordinateSystem": coord_system, "ayanamshas": ayanamshas })))
 }
 
 fn build_coord_system_label(eq: bool, topo: bool) -> String {
