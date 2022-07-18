@@ -1,4 +1,6 @@
 use serde::{Deserialize};
+use actix_web::{web::{Query} };
+use super::lib::{models::date_info::DateInfo, julian_date::{current_datetime_string}};
 
 #[derive(Deserialize)]
 pub struct InputOptions {
@@ -34,4 +36,29 @@ pub struct InputOptions {
   pub retro: Option<u8>, // show planet stations (retrograde, peak), 0 no, 1 yes
   pub iso: Option<u8>, // 0 show JD, 1 show ISO UTC
   pub tzs: Option<i16>, // offset in seconds from UTC
+}
+
+pub fn to_ayanamsha_keys(params: &Query<InputOptions>, def_val: &str) -> (Vec<String>, String) {
+  let aya: String = params.aya.clone().unwrap_or(def_val.to_string());
+  
+  let aya_keys = match aya.as_str() {
+    "all" => vec![],
+    "core" => vec!["true_citra", "lahiri", "krishnamurti"],
+    _ => if aya.len() > 1 { aya.as_str().split(",").collect() } else { vec![] },
+  }.into_iter().map(|k| k.to_owned()).collect();
+  let mode = match aya.as_str() {
+    "all"  | "core" => aya,
+    _ => "keys".to_string(),
+  };
+  (aya_keys, mode)
+}
+
+pub fn to_date_object(params: &Query<InputOptions>) -> DateInfo {
+  let jd = params.jd.clone().unwrap_or(0f64);
+  if jd > 200000f64 {
+    DateInfo::new_from_jd(jd)
+  } else {
+    let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+    DateInfo::new(dateref.to_string().as_str())
+  }
 }
