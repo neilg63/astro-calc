@@ -55,7 +55,7 @@ pub fn to_ayanamsha_keys(params: &Query<InputOptions>, def_val: &str) -> (Vec<St
 
 pub fn to_date_object(params: &Query<InputOptions>) -> DateInfo {
   let jd = params.jd.clone().unwrap_or(0f64);
-  if jd > 200000f64 {
+  if jd > 1_000_000f64 {
     DateInfo::new_from_jd(jd)
   } else {
     let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
