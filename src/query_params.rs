@@ -53,12 +53,26 @@ pub fn to_ayanamsha_keys(params: &Query<InputOptions>, def_val: &str) -> (Vec<St
   (aya_keys, mode)
 }
 
-pub fn to_date_object(params: &Query<InputOptions>) -> DateInfo {
-  let jd = params.jd.clone().unwrap_or(0f64);
+pub fn to_date_object_by_num(params: &Query<InputOptions>, num: u8) -> DateInfo {
+  let jd = match num {
+    2 => params.jd2.clone().unwrap_or(0f64),
+    _ => params.jd.clone().unwrap_or(0f64)
+  };
   if jd > 1_000_000f64 {
     DateInfo::new_from_jd(jd)
   } else {
-    let dateref: String = params.dt.clone().unwrap_or(current_datetime_string());
+    let dateref: String = match num {
+      2 => params.dt2.clone().unwrap_or(current_datetime_string()),
+      _ => params.dt.clone().unwrap_or(current_datetime_string()),
+    };
     DateInfo::new(dateref.to_string().as_str())
   }
+}
+
+pub fn to_date_object(params: &Query<InputOptions>) -> DateInfo {
+  to_date_object_by_num(&params, 1)
+}
+
+pub fn to_date_object_2(params: &Query<InputOptions>) -> DateInfo {
+  to_date_object_by_num(&params, 2)
 }
