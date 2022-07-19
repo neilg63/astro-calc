@@ -13,6 +13,8 @@ pub struct AscMc {
   coasc1: f64,		// "co-ascendant" (W. Koch) *
   coasc2: f64,		// "co-ascendant" (M. Munkasey) *
   polasc: f64,
+  #[serde(rename="ascAzi",skip_serializing_if = "Option::is_none")]
+  asc_azi: Option<f64>,
   #[serde(rename="mcAlt",skip_serializing_if = "Option::is_none")]
   mc_alt: Option<f64>,
   #[serde(rename="mcAzi",skip_serializing_if = "Option::is_none")]
@@ -20,7 +22,7 @@ pub struct AscMc {
 }
 
 impl AscMc {
-  pub fn new(points: [f64; 10], mc_alt: Option<f64>, mc_azi: Option<f64>) -> AscMc {
+  pub fn new(points: [f64; 10], asc_azi: Option<f64>, mc_alt: Option<f64>, mc_azi: Option<f64>) -> AscMc {
       AscMc {
         ascendant: points[0],
         mc: points[1],
@@ -30,13 +32,10 @@ impl AscMc {
         coasc1: points[5],
         coasc2: points[6],
         polasc: points[7],
+        asc_azi,
         mc_alt,
         mc_azi
       }
-  }
-
-  pub fn add_mc_alt(mut self, mc_alt: f64) {
-    self.mc_alt = Some(mc_alt);
   }
 }
 
@@ -63,13 +62,14 @@ impl HouseData {
       true => calc_altitude_tuple(jd, false, lat, lng, hd.ascmc[1], 0f64),
       _ => (None, None)
     };
+    let (_, asc_azi) = calc_altitude_tuple(jd, false, lat, lng, hd.ascmc[0], 0f64);
       HouseData {
         jd: jd,
         lng: lng,
         lat: lat,
         system: system,
         houses,
-        points: AscMc::new(hd.ascmc, mc_alt, mc_azi)
+        points: AscMc::new(hd.ascmc, asc_azi, mc_alt, mc_azi)
     }
   }
 }
@@ -126,7 +126,7 @@ pub fn get_house_systems(jd: f64, geo: GeoPos, keys: Vec<char>) -> HouseSetData 
   let match_all = keys.len() == 1 && keys[0] == 'a';
   let match_whole_only = keys.len() == 1 && keys[0] == 'W' || keys.len() < 1;
   let matched_keys = if match_whole_only { vec!['W'] } else { keys };
-  let mut points: AscMc = AscMc::new([0f64; 10], None, None);
+  let mut points: AscMc = AscMc::new([0f64; 10], None, None, None);
   let mut points_matched = false;
   let mut sets: Vec<HouseSet> = Vec::new();
   for key in house_systems {
