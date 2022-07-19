@@ -297,6 +297,14 @@ pub fn calc_altitude(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f64, ln
 /*
 * Match the projected altitude of any celestial object
 */
+pub fn calc_altitude_tuple(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f64, lng: f64, lat: f64) -> (Option<f64>, Option<f64>) {
+  let result = azalt(tjd_ut, is_equal, geo_lat, geo_lng, lng, lat);
+  (Some(result.value), Some(result.azimuth))
+}
+
+/*
+* Match the projected altitude of any celestial object
+*/
 pub fn calc_altitude_object(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f64, key: &str) -> f64 {
   let pos = match is_equal {
     true => calc_body_eq_jd_topo(tjd_ut, key, GeoPos::simple(geo_lat, geo_lng)),
