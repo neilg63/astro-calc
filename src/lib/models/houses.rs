@@ -62,7 +62,10 @@ impl HouseData {
       true => calc_altitude_tuple(jd, false, lat, lng, hd.ascmc[1], 0f64),
       _ => (None, None)
     };
-    let (_, asc_azi) = calc_altitude_tuple(jd, false, lat, lng, hd.ascmc[0], 0f64);
+    let (_, asc_azi) = match add_altitude {
+      true => calc_altitude_tuple(jd, false, lat, lng, hd.ascmc[0], 0f64),
+      _ => (None, None),
+    };
       HouseData {
         jd: jd,
         lng: lng,
