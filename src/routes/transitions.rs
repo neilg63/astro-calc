@@ -1,6 +1,6 @@
 use std::{thread, time};
 use serde_json::*;
-use super::super::lib::{julian_date::{current_datetime_string},traits::{FromKey},transitions::*, transposed_transitions::{calc_transposed_graha_transitions_from_source_refs_topo, calc_transposed_graha_transitions_from_source_refs_geo}, models::{geo_pos::*, date_info::*, general::*}, utils::{converters::*}};
+use super::super::lib::{traits::{FromKey},transitions::*, transposed_transitions::{calc_transposed_graha_transitions_from_source_refs_topo, calc_transposed_graha_transitions_from_source_refs_geo}, models::{geo_pos::*, date_info::*, general::*}, utils::{converters::*}};
 use actix_web::{get, Responder,web::{Query, Json}};
 use super::super::{query_params::*, reset_ephemeris_path};
 use libswe_sys::sweconst::{Bodies};
@@ -57,8 +57,9 @@ async fn pheno_data(params: Query<InputOptions>) -> impl Responder {
 async fn body_transposed_transitions_range(params: Query<InputOptions>) -> impl Responder {
   reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(50);
-  let dateref: String = params.dt2.clone().unwrap_or(current_datetime_string());
-  let historic_dt = DateInfo::new(dateref.to_string().as_str());
+  /* let dateref: String = params.dt2.clone().unwrap_or(current_datetime_string());
+  let historic_dt = DateInfo::new(dateref.to_string().as_str()); */
+  let historic_dt = to_date_object_2(&params);
   let current_dt = to_date_object(&params);
   let loc: String = params.loc2.clone().unwrap_or("0,0".to_string());
   let historic_geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
@@ -96,7 +97,7 @@ async fn test_transitions(params: Query<InputOptions>) -> impl Responder {
   let alt_transition_sets_jd = calc_transposed_graha_transitions_from_source_refs_topo(date.jd, geo, date.jd, geo, keys.clone(), num_days);
   let alt_transition_sets = FlexiValueSet::FlexiValues(alt_transition_sets_jd.iter().map(|vs| vs.as_flexi_values(iso_mode)).collect());
   thread::sleep(micro_interval);
-  Json(json!({ "valid": valid, "date": date, "geo": geo, "transitionSets": transition_sets, "altTransitionets": alt_transition_sets }))
+  Json(json!({ "valid": valid, "date": date, "geo": geo, "transitionSets": transition_sets, "altTransitionSets": alt_transition_sets }))
 }
 
 #[get("/test-swe-mc")]
