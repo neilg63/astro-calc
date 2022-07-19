@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use libswe_sys::swerust::{handler_swe14::*};
 use super::{geo_pos::*};
-use super::super::core::{calc_altitude};
+use super::super::core::{calc_altitude_tuple};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct AscMc {
@@ -14,11 +14,13 @@ pub struct AscMc {
   coasc2: f64,		// "co-ascendant" (M. Munkasey) *
   polasc: f64,
   #[serde(rename="mcAlt",skip_serializing_if = "Option::is_none")]
-  mc_alt: Option<f64>
+  mc_alt: Option<f64>,
+  #[serde(rename="mcAzi",skip_serializing_if = "Option::is_none")]
+  mc_azi: Option<f64>,
 }
 
 impl AscMc {
-  pub fn new(points: [f64; 10], mc_alt: Option<f64>) -> AscMc {
+  pub fn new(points: [f64; 10], mc_alt: Option<f64>, mc_azi: Option<f64>) -> AscMc {
       AscMc {
         ascendant: points[0],
         mc: points[1],
@@ -28,7 +30,8 @@ impl AscMc {
         coasc1: points[5],
         coasc2: points[6],
         polasc: points[7],
-        mc_alt
+        mc_alt,
+        mc_azi
       }
   }
 
@@ -55,14 +58,18 @@ impl HouseData {
       'G' => hd.cusps[1..37].to_vec(),
       _ => hd.cusps[1..13].to_vec(),
     };
-    let mc_alt = if calc_mc_alt && hd.ascmc.len() > 0 { Some(calc_altitude(jd, false, lat, lng, hd.ascmc[1], 0f64)) } else { None };
+    let add_altitude = calc_mc_alt && hd.ascmc.len() > 0;
+    let (mc_alt, mc_azi) = match add_altitude {
+      true => calc_altitude_tuple(jd, false, lat, lng, hd.ascmc[1], 0f64),
+      _ => (None, None)
+    };
       HouseData {
         jd: jd,
         lng: lng,
         lat: lat,
         system: system,
         houses,
-        points: AscMc::new(hd.ascmc, mc_alt)
+        points: AscMc::new(hd.ascmc, mc_alt, mc_azi)
     }
   }
 }
@@ -119,7 +126,7 @@ pub fn get_house_systems(jd: f64, geo: GeoPos, keys: Vec<char>) -> HouseSetData 
   let match_all = keys.len() == 1 && keys[0] == 'a';
   let match_whole_only = keys.len() == 1 && keys[0] == 'W' || keys.len() < 1;
   let matched_keys = if match_whole_only { vec!['W'] } else { keys };
-  let mut points: AscMc = AscMc::new([0f64; 10], None);
+  let mut points: AscMc = AscMc::new([0f64; 10], None, None);
   let mut points_matched = false;
   let mut sets: Vec<HouseSet> = Vec::new();
   for key in house_systems {
