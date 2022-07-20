@@ -2,7 +2,7 @@ use std::{thread, time};
 use serde_json::*;
 use super::super::lib::{core::*,  transitions::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*, general::*}, utils::{converters::*}, settings::{ayanamshas::{match_ayanamsha_key}}, planet_stations::{match_all_nextprev_planet_stations, BodySpeedSet}};
 use actix_web::{get, Responder,web::{Query, Json} };
-use super::super::lib::julian_date::{current_datetime_string, current_year};
+use super::super::lib::julian_date::{current_year};
 use super::super::{query_params::*};
 use serde::{Serialize, Deserialize};
 use super::super::{reset_ephemeris_path};
