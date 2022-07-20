@@ -17,6 +17,8 @@ pub struct AscMc {
   asc_azi: Option<f64>,
   #[serde(rename="ascRa",skip_serializing_if = "Option::is_none")]
   asc_ra: Option<f64>,
+  #[serde(rename="ascDec",skip_serializing_if = "Option::is_none")]
+  asc_dec: Option<f64>,
   #[serde(rename="mcAlt",skip_serializing_if = "Option::is_none")]
   mc_alt: Option<f64>,
   #[serde(rename="mcAzi",skip_serializing_if = "Option::is_none")]
@@ -40,6 +42,7 @@ impl AscMc {
         polasc: points[7],
         asc_azi: None,
         asc_ra: None,
+        asc_dec: None,
         mc_alt: None,
         mc_azi: None,
         mc_ra: None,
@@ -47,7 +50,7 @@ impl AscMc {
       }
   }
 
-  pub fn new_extended(points: [f64; 10], asc_azi: Option<f64>, asc_ra: Option<f64>, mc_alt: Option<f64>, mc_azi: Option<f64>, mc_ra: Option<f64>, mc_dec: Option<f64>) -> AscMc {
+  pub fn new_extended(points: [f64; 10], asc_azi: Option<f64>, asc_ra: Option<f64>, asc_dec: Option<f64>, mc_alt: Option<f64>, mc_azi: Option<f64>, mc_ra: Option<f64>, mc_dec: Option<f64>) -> AscMc {
     AscMc {
       ascendant: points[0],
       mc: points[1],
@@ -59,6 +62,7 @@ impl AscMc {
       polasc: points[7],
       asc_azi,
       asc_ra,
+      asc_dec,
       mc_alt,
       mc_azi,
       mc_ra,
@@ -94,7 +98,7 @@ impl HouseData {
       true => calc_altitude_tuple(jd, false, lat, lng, hd.ascmc[0], 0f64),
       _ => (None, None),
     };
-    let (asc_ra, _) = match add_asc_mc_coords {
+    let (asc_ra, asc_dec) = match add_asc_mc_coords {
       true => ecliptic_to_equatorial_tuple(jd, hd.ascmc[0], 0f64),
       _ => (None, None),
     };
@@ -108,7 +112,7 @@ impl HouseData {
         lat: lat,
         system: system,
         houses,
-        points: AscMc::new_extended(hd.ascmc, asc_azi, asc_ra, mc_alt, mc_azi, mc_ra, mc_dec)
+        points: AscMc::new_extended(hd.ascmc, asc_azi, asc_ra, asc_dec, mc_alt, mc_azi, mc_ra, mc_dec)
     }
   }
 }
