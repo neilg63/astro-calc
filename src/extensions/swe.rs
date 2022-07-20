@@ -3,7 +3,7 @@ use std::os::raw::{c_char, c_double, c_int};
 //use std::{thread, time};
 use serde::{Serialize, Deserialize};
 use libswe_sys::sweconst::{Bodies};
-use super::super::lib::settings::ayanamshas::*;
+use super::super::lib::{settings::ayanamshas::*, models::general::{LngLat}};
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
 pub struct AltitudeSet {
@@ -72,6 +72,10 @@ extern "C" {
   // swe_set_sid_mode(sidModeNum, 0, 0);
   pub fn swe_set_sid_mode(sid_mode: i32, t9: f64, ayan_t0: f64);
 
+
+  /* // convert ecliptic to equatorial
+  pub fn swe_cotrans(xin: *mut [c_double; 3], xout: *mut [c_double; 3], eps: c_double);
+ */
 }
 
 /**
@@ -178,3 +182,16 @@ pub fn set_sid_mode(iflag: i32) {
   }
 }
 
+/* prefer native implementation
+ pub fn ecliptic_to_equatorial(lng: f64, lat: f64, geo_lng: f64) -> LngLat {
+  let xin: &mut [f64; 3] = &mut [lng, lat, 1f64];
+  let xout: &mut [f64; 3] = &mut [0f64, 0f64, 1f64];
+  //let eps = if geo_lng >= 0f64 {geo_lng - 90f64} else { geo_lng };
+  let eps = -1f64;
+  println!("eps: {}, geoLng: {} ", eps, geo_lng);
+  let result = unsafe {
+    swe_cotrans(xin, xout, eps);
+    xout
+  };
+  LngLat::new(result[0], result[1])
+} */
