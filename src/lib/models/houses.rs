@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use libswe_sys::swerust::{handler_swe14::*};
 use super::{geo_pos::*};
-use super::super::core::{calc_altitude_tuple};
+use super::super::core::{calc_altitude_tuple, ecliptic_to_equatorial_tuple};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct AscMc {
@@ -15,14 +15,20 @@ pub struct AscMc {
   polasc: f64,
   #[serde(rename="ascAzi",skip_serializing_if = "Option::is_none")]
   asc_azi: Option<f64>,
+  #[serde(rename="ascRa",skip_serializing_if = "Option::is_none")]
+  asc_ra: Option<f64>,
   #[serde(rename="mcAlt",skip_serializing_if = "Option::is_none")]
   mc_alt: Option<f64>,
   #[serde(rename="mcAzi",skip_serializing_if = "Option::is_none")]
   mc_azi: Option<f64>,
+  #[serde(rename="mcRa",skip_serializing_if = "Option::is_none")]
+  mc_ra: Option<f64>,
+  #[serde(rename="mcDec",skip_serializing_if = "Option::is_none")]
+  mc_dec: Option<f64>,
 }
 
 impl AscMc {
-  pub fn new(points: [f64; 10], asc_azi: Option<f64>, mc_alt: Option<f64>, mc_azi: Option<f64>) -> AscMc {
+  pub fn new(points: [f64; 10]) -> AscMc {
       AscMc {
         ascendant: points[0],
         mc: points[1],
@@ -32,10 +38,32 @@ impl AscMc {
         coasc1: points[5],
         coasc2: points[6],
         polasc: points[7],
-        asc_azi,
-        mc_alt,
-        mc_azi
+        asc_azi: None,
+        asc_ra: None,
+        mc_alt: None,
+        mc_azi: None,
+        mc_ra: None,
+        mc_dec: None
       }
+  }
+
+  pub fn new_extended(points: [f64; 10], asc_azi: Option<f64>, asc_ra: Option<f64>, mc_alt: Option<f64>, mc_azi: Option<f64>, mc_ra: Option<f64>, mc_dec: Option<f64>) -> AscMc {
+    AscMc {
+      ascendant: points[0],
+      mc: points[1],
+      armc: points[2],
+      vertex: points[3],
+      equasc: points[4],
+      coasc1: points[5],
+      coasc2: points[6],
+      polasc: points[7],
+      asc_azi,
+      asc_ra,
+      mc_alt,
+      mc_azi,
+      mc_ra,
+      mc_dec
+    }
   }
 }
 
@@ -51,19 +79,27 @@ pub struct HouseData {
 
 impl HouseData {
 
-  pub fn new(jd: f64, lat: f64, lng: f64, system: char, calc_mc_alt: bool) -> HouseData {
+  pub fn new(jd: f64, lat: f64, lng: f64, system: char, calc_extended: bool) -> HouseData {
     let hd = houses(jd, lat, lng, system);
     let houses: Vec<f64> = match system {
       'G' => hd.cusps[1..37].to_vec(),
       _ => hd.cusps[1..13].to_vec(),
     };
-    let add_altitude = calc_mc_alt && hd.ascmc.len() > 0;
-    let (mc_alt, mc_azi) = match add_altitude {
+    let add_asc_mc_coords = calc_extended && hd.ascmc.len() > 0;
+    let (mc_alt, mc_azi) = match add_asc_mc_coords {
       true => calc_altitude_tuple(jd, false, lat, lng, hd.ascmc[1], 0f64),
       _ => (None, None)
     };
-    let (_, asc_azi) = match add_altitude {
+    let (_, asc_azi) = match add_asc_mc_coords {
       true => calc_altitude_tuple(jd, false, lat, lng, hd.ascmc[0], 0f64),
+      _ => (None, None),
+    };
+    let (asc_ra, _) = match add_asc_mc_coords {
+      true => ecliptic_to_equatorial_tuple(jd, hd.ascmc[0], 0f64),
+      _ => (None, None),
+    };
+    let (mc_ra, mc_dec) = match add_asc_mc_coords {
+      true => ecliptic_to_equatorial_tuple(jd, hd.ascmc[1], 0f64),
       _ => (None, None),
     };
       HouseData {
@@ -72,7 +108,7 @@ impl HouseData {
         lat: lat,
         system: system,
         houses,
-        points: AscMc::new(hd.ascmc, asc_azi, mc_alt, mc_azi)
+        points: AscMc::new_extended(hd.ascmc, asc_azi, asc_ra, mc_alt, mc_azi, mc_ra, mc_dec)
     }
   }
 }
@@ -110,8 +146,8 @@ pub fn calc_ascendant(jd: f64, geo: GeoPos) -> f64 {
   get_ascendant(jd, geo.lat, geo.lng)
 }
 
-pub fn get_house_data(jd: f64, lat: f64, lng: f64, system: char, calc_mc_alt: bool) -> HouseData {
-  HouseData::new(jd, lat, lng, system, calc_mc_alt)
+pub fn get_house_data(jd: f64, lat: f64, lng: f64, system: char, calc_extended: bool) -> HouseData {
+  HouseData::new(jd, lat, lng, system, calc_extended)
 }
 
 pub fn houses_system_chars() -> Vec<char> {
@@ -129,11 +165,12 @@ pub fn get_house_systems(jd: f64, geo: GeoPos, keys: Vec<char>) -> HouseSetData 
   let match_all = keys.len() == 1 && keys[0] == 'a';
   let match_whole_only = keys.len() == 1 && keys[0] == 'W' || keys.len() < 1;
   let matched_keys = if match_whole_only { vec!['W'] } else { keys };
-  let mut points: AscMc = AscMc::new([0f64; 10], None, None, None);
+  let mut points: AscMc = AscMc::new([0f64; 10]);
   let mut points_matched = false;
   let mut sets: Vec<HouseSet> = Vec::new();
   for key in house_systems {
-    let hd = get_house_data(jd, geo.lat, geo.lng, key, !points_matched);
+    let add_extended_asc_mc_values = !points_matched;
+    let hd = get_house_data(jd, geo.lat, geo.lng, key, add_extended_asc_mc_values);
     if match_all || matched_keys.contains(&key) {
       if !points_matched {
         points = hd.points;

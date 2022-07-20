@@ -75,6 +75,10 @@ pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool, geo_o
     Some(a_set) => Some(a_set.azimuth),
     None => None
   };
+ /*  if let Some(geo) = geo_opt {
+    let tt = ecliptic_to_equatorial_basic(jd, result_geo.longitude, result_geo.latitude);
+    println!("lng {}, lat {}, ra: {} de: {}, geo {:?} : {:?}, cos 30: {}", lng, result_geo.latitude, ra, result.latitude, geo, tt, (30f64 * (std::f64::consts::PI) / 180f64).cos());
+  } */
   GrahaPos::new_extended(key, lng, result_geo.latitude,  ra, result.latitude, result_geo.speed_longitude, result_geo.speed_latitude,  result.speed_longitude, result.speed_latitude, pheno, altitude, azimuth)
 }
 
@@ -398,4 +402,31 @@ pub fn get_all_ayanamsha_values(jd: f64) -> Vec<KeyNumValue> {
     items.push(KeyNumValue::new(key, value));
   }
   items
+}
+
+pub fn ecliptic_obliquity(jd: f64) -> f64 {
+  let epoch = 2451545f64;
+  let t = (jd - epoch) / 36525f64;
+  let ecl_obl = 23.439292f64 - 0.013004166666666666f64 * t - 1.6666666666666665E-7f64 * t * t + 5.027777777777778E-7f64 * t * t * t;
+  ecl_obl * 0.017453292519943295f64
+}
+
+pub fn ecliptic_to_equatorial_basic(jd: f64, lng: f64, lat: f64) -> LngLat {
+  let obliq = ecliptic_obliquity(jd);
+  let rad = std::f64::consts::PI / 180f64;
+  let sin_e = obliq.sin();
+  let cos_e = obliq.cos();
+  let sin_l = (lng * rad).sin();
+  let cos_l = (lng * rad).cos();
+  let sin_b = (lat * rad).sin();
+  let cos_b = (lat * rad).cos();
+  let tan_b = (lat * rad).tan();
+  let ra = (sin_l * cos_e - tan_b * sin_e).atan2(cos_l);
+  let dec = (sin_b * cos_e + cos_b * sin_e * sin_l).asin();
+  return LngLat::new((ra / rad + 360f64) % 360f64, dec / rad)
+}
+
+pub fn ecliptic_to_equatorial_tuple(jd: f64, lng: f64, lat: f64) -> (Option<f64>, Option<f64>) {
+  let coords = ecliptic_to_equatorial_basic(jd, lng, lat);
+  (Some(coords.lng), Some(coords.lat))
 }
