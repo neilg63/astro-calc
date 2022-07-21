@@ -35,15 +35,11 @@ Path parameters
 
 GET /date
 
-Show data variants including Indian dates from sunrise to sunrise and detailed sun transition infor based on with query string parameters
+Show date and time variants including Indian dates from sunrise to sunrise and detailed sun transition infor based on with query string parameters
 
-* dt: Date
-* loc: lat,lng(,alt) coordinates
+* dt: Date (ISO 8601 UTC)
+* loc: lat,lng(,alt) coordinates as decimals, e.g. 45.1,13.2 is 45.1 N and 13.2º S, -21.75,-45.21 is 21º S and 45.21º W
 * iso: 0 = julian days, 1 ISO UTC
-
-Path parameters
-
-* :dateref: either ISO date string with optional time or julian day
   
 ### GET /positions
 
@@ -243,7 +239,7 @@ const adjustedLongitude = subtract360(tropicalLongitude);
 Julian day to unix time:
 ```
 
-// Julian day to standard unix timestamp in seconds with 1970-01-01 00:00:00 UTC equal to 2440587.5 julian days
+// Julian day to standard unix timestamp in seconds with 1970-01-01 00:00:00 UTC equal to 2440587.5 Julian days
 const julianDayToUnixTime = (jd = 0) => {
   return (jd - 2440587.5) * 24 * 60 * 60;
 };
