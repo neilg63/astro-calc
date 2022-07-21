@@ -15,7 +15,7 @@ pub fn body_keys_str_to_keys_or(key_string: String, default_keys: Vec<&str>) -> 
 }
 
 pub fn loc_string_to_geo(loc: &str) -> Option<GeoPos> {
-  let parts: Vec<f64> = loc.split(",").into_iter().map(|p| p.parse::<f64>()).filter(|p| match p { Ok(n) => true, _ => false } ).map(|p| p.unwrap()).collect();
+  let parts: Vec<f64> = loc.split(",").into_iter().map(|p| p.parse::<f64>()).filter(|p| match p { Ok(_n) => true, _ => false } ).map(|p| p.unwrap()).collect();
   if parts.len() >= 2 {
     let alt = if parts.len() > 2 { parts[2] } else { 0f64 };
     Some(GeoPos::new(parts[0], parts[1], alt))
