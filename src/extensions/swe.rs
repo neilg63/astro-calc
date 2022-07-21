@@ -145,9 +145,9 @@ pub fn azalt(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f64, lng: f64, 
       *p_xaz
   };
   AltitudeSet{
-      azimuth: result[0],
-      value: result[1],
-      apparent: result[2],
+      azimuth: result[0] % 360f64,
+      value: result[1] % 360f64,
+      apparent: result[2] % 360f64,
   }
 }
 
