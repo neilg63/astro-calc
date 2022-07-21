@@ -32,7 +32,7 @@ pub fn calc_body_jd(jd: f64, key: &str, sidereal: bool, topo: bool) -> GrahaPos 
  * Only implement tropical variants for equatorial positions
  * Ayanamsha value may be subtracted if required
  */
-pub fn calc_body_eq_jd(jd: f64, key: &str, topo: bool) -> GrahaPos {
+pub fn calc_body_eq_jd_swe(jd: f64, key: &str, topo: bool) -> GrahaPos {
   let combo: i32;
   //let eq_flag = OptionalFlag::SEFLG_EQUATORIAL;
   let eq_flag = OptionalFlag::EquatorialPosition as i32;
@@ -45,6 +45,21 @@ pub fn calc_body_eq_jd(jd: f64, key: &str, topo: bool) -> GrahaPos {
   let result = calc_ut(jd, Bodies::from_key(key), combo);
   let lng = adjust_lng_by_body_key(key, result.longitude);
   GrahaPos::new_eq(key, result.longitude, result.latitude, lng, result.speed_latitude)
+}
+
+/**
+ * For Ketu fetch reversed Rahu ecliptic position and then calculate the right ascension and declination via 
+ * ecliptic_to_equatorial_basic
+ */
+pub fn calc_body_eq_jd(jd: f64, key: &str, topo: bool) -> GrahaPos {
+  match key {
+    "ke" => {
+      let pos = calc_body_jd(jd, key, false, topo);
+      let eq_pos = ecliptic_to_equatorial_basic(jd, pos.lng, pos.lat);
+      GrahaPos::new_eq(key,eq_pos.lng, eq_pos.lat,pos.lng_speed, pos.lat_speed)
+    },
+    _ => calc_body_eq_jd_swe(jd, key, topo)
+  }
 }
 
 pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool, geo_opt: Option<GeoPos>) -> GrahaPos {
@@ -65,7 +80,7 @@ pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool, geo_o
   // let ra = adjust_lng_by_body_key(key, result.longitude);
   let (ra, dec) = adjust_ra_dec_by_body_key(key, jd, result.longitude, result.latitude, result_ec.longitude, result_ec.latitude);
   let altitude_set = match geo_opt {
-    Some(geo) => Some(azalt(jd, true, geo.lat, geo.lng, result.longitude, result.latitude)),
+    Some(geo) => Some(azalt(jd, true, geo.lat, geo.lng, ra, dec)),
     _ => None,
   };
   let altitude = match altitude_set {
