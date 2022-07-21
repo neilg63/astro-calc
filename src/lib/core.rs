@@ -1,7 +1,7 @@
 use math::round::{floor};
 use libswe_sys::sweconst::{Bodies, OptionalFlag};
 use libswe_sys::swerust::{handler_swe03::*};
-use super::{settings::{ayanamshas::*},traits::*, math_funcs::{calc_progress_day_jds_by_year, adjust_lng_by_body_key}, math_funcs::{subtract_360}, transitions::{get_pheno_result}, transposed_transitions::{calc_transitions_from_source_refs_minmax}};
+use super::{settings::{ayanamshas::*},traits::*, math_funcs::{calc_progress_day_jds_by_year, adjust_lng_by_body_key, calc_opposite}, math_funcs::{subtract_360}, transitions::{get_pheno_result}, transposed_transitions::{calc_transitions_from_source_refs_minmax}};
 use super::models::{graha_pos::*, geo_pos::*, general::*, houses::{calc_ascendant}};
 use super::super::extensions::swe::{azalt, set_topo, set_sid_mode, get_ayanamsha};
 use std::collections::{HashMap};
@@ -59,10 +59,11 @@ pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool, geo_o
   }
   let combo_geo = if topo { speed_flag | OptionalFlag::TopocentricPosition as i32 } else { speed_flag };
   let result = calc_ut(jd, Bodies::from_key(key), combo);
-  let result_geo = calc_ut(jd, Bodies::from_key(key), combo_geo);
+  let result_ec = calc_ut(jd, Bodies::from_key(key), combo_geo);
   let pheno = if show_pheno { Some(get_pheno_result(jd, key, 0i32)) } else { None };
-  let lng = adjust_lng_by_body_key(key, result_geo.longitude);
-  let ra = adjust_lng_by_body_key(key, result.longitude);
+  let lng = adjust_lng_by_body_key(key, result_ec.longitude);
+  // let ra = adjust_lng_by_body_key(key, result.longitude);
+  let (ra, dec) = adjust_ra_dec_by_body_key(key, jd, result.longitude, result.latitude, result_ec.longitude, result_ec.latitude);
   let altitude_set = match geo_opt {
     Some(geo) => Some(azalt(jd, true, geo.lat, geo.lng, result.longitude, result.latitude)),
     _ => None,
@@ -76,10 +77,10 @@ pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool, geo_o
     None => None
   };
  /*  if let Some(geo) = geo_opt {
-    let tt = ecliptic_to_equatorial_basic(jd, result_geo.longitude, result_geo.latitude);
-    println!("lng {}, lat {}, ra: {} de: {}, geo {:?} : {:?}, cos 30: {}", lng, result_geo.latitude, ra, result.latitude, geo, tt, (30f64 * (std::f64::consts::PI) / 180f64).cos());
+    let tt = ecliptic_to_equatorial_basic(jd, result_ec.longitude, result_ec.latitude);
+    println!("lng {}, lat {}, ra: {} de: {}, geo {:?} : {:?}, cos 30: {}", lng, result_ec.latitude, ra, result.latitude, geo, tt, (30f64 * (std::f64::consts::PI) / 180f64).cos());
   } */
-  GrahaPos::new_extended(key, lng, result_geo.latitude,  ra, result.latitude, result_geo.speed_longitude, result_geo.speed_latitude,  result.speed_longitude, result.speed_latitude, pheno, altitude, azimuth)
+  GrahaPos::new_extended(key, lng, result_ec.latitude,  ra, dec, result_ec.speed_longitude, result_ec.speed_latitude,  result.speed_longitude, result.speed_latitude, pheno, altitude, azimuth)
 }
 
 pub fn calc_body_dual_jd_geo(jd: f64, key: &str, show_pheno: bool) -> GrahaPos {
@@ -429,4 +430,19 @@ pub fn ecliptic_to_equatorial_basic(jd: f64, lng: f64, lat: f64) -> LngLat {
 pub fn ecliptic_to_equatorial_tuple(jd: f64, lng: f64, lat: f64) -> (Option<f64>, Option<f64>) {
   let coords = ecliptic_to_equatorial_basic(jd, lng, lat);
   (Some(coords.lng), Some(coords.lat))
+}
+
+
+
+pub fn adjust_ra_dec_by_body_key(key: &str, jd: f64, src_ra: f64, src_dec: f64, lng: f64, lat: f64) -> (f64, f64) {
+  match key {
+    "ke" => {
+      if let (Some(ra), Some(dec)) = ecliptic_to_equatorial_tuple(jd, calc_opposite(lng), lat) {
+        (ra, dec)
+      } else {
+        (lng, lat)
+      }
+    },
+    _ => (src_ra, src_dec),
+  }
 }
