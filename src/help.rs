@@ -36,6 +36,8 @@ pub fn endpoint_help() -> HashMap<String, HashMap<String,String>> {
       ("bodies", "comma-separated list of required bodies, all or core"),
       ("topo", "0: geocentric, 1: topocentric"),
       ("eq", "0: ecliptic only, 1 equatorial only, 2: show equatorial and ecliptic, 3: show azimuth and altitide. 4: Also show other planetary phenomena"),
+      ("it", "1: show Indian time units and progression from sunrise to sunrise , 0: do not show Indian time"),
+      ("retro", "1: show retrograde and peak stations of the main planets, 0: do not show planet stations."),
       ("ct", "include transits for the referenced bodies"),
       ("hsys", "Comma-separated list of house system letters or `all` for all systems, default W (whole house system)"),
       ("aya", "comma-separated list of available ayanamshas (see below). These are added as separate data-set and should be applied in a post processing stage via simple subtraction from the lng, ascendant or rectAscension values, which are always tropical (they may automatically applied in /positions)"),
