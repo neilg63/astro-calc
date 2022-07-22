@@ -35,7 +35,7 @@ Path parameters
 
 GET /date
 
-Show date and time variants including Indian dates from sunrise to sunrise and detailed sun transition infor based on with query string parameters
+Show date and time variants including Indian time units (ghati, vighati and lipta) and progression from sunrise to sunrise with extended sun transition data.
 
 * dt: Date (ISO 8601 UTC)
 * loc: lat,lng(,alt) coordinates as decimals, e.g. 45.1,13.2 is 45.1 N and 13.2º S, -21.75,-45.21 is 21º S and 45.21º W
@@ -85,7 +85,8 @@ Query string parameters:
   * 2 both ecliptic and equatorial,
   * 3 both with altitude, azimuth and extra planetary phenomena such as magnitude and phase angle. The azimuth and altitude will only be shown in topocentric mode.
   * 4 With extra planetary phenomena such as magnitude and phase angle as an inline subset.
-* ph: 0 = no extra phenomena unless eq == 4, 1 = show planetary phenomena for the referenced time unless it is shown inline with celestial body data.
+* it: 1 = show indian time units with progress since the start of the current day period, 0 = do not show indian time units
+* ph: 1 = show planetary phenomena for the referenced time unless it is shown inline with celestial body data, 0 = no extra phenomena unless eq == 4
 * hsys: Comma-separated list of house system letters or `all` for all systems, default W (whole house system)
 * aya: Comma-separated list of available ayanamshas (see below). These are added as separate data-set and should be applied in a post processing stage via simple subtraction from the lng, ascendant or rectAscension values, which are always tropical (they may automatically applied in /positions)
 * retro: 1: show retrograde and peak stations of the main planets, 0: do not show planet stations
