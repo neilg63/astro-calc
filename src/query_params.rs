@@ -23,6 +23,7 @@ pub struct InputOptions {
   pub loc2: Option<String>, // comma-separated lat,lng(,alt) numeric string
   pub body: Option<String>, // primary celestial body key
   pub ct: Option<u8>, // show current transitions (for transposed transitions and chart-data )
+  pub it: Option<u8>, // show indian time divisions based on sunrise/set
   pub p2: Option<u8>, // show progress items ( P2 )
   pub p2ago: Option<u8>, // years ago for P2
   pub p2yrs: Option<u8>, // num years for p2
