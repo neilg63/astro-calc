@@ -1,6 +1,6 @@
 use std::{thread, time};
 use serde_json::*;
-use super::super::lib::{core::*,  transitions::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*, general::*}, utils::{converters::*}, settings::{ayanamshas::{match_ayanamsha_key}}, planet_stations::{match_all_nextprev_planet_stations, BodySpeedSet}};
+use super::super::lib::{core::*,  transitions::*, models::{geo_pos::*, graha_pos::*, houses::*, date_info::*, general::*, i_time::*}, utils::{converters::*}, settings::{ayanamshas::{match_ayanamsha_key}}, planet_stations::{match_all_nextprev_planet_stations, BodySpeedSet}};
 use actix_web::{get, Responder,web::{Query, Json} };
 use super::super::lib::julian_date::{current_year};
 use super::super::{query_params::*};
@@ -12,6 +12,8 @@ struct ChartDataResult {
   valid: bool,
   date: DateInfo,
   geo: GeoPos,
+  #[serde(rename="indianTime",skip_serializing_if = "Option::is_none")]
+  indian_time: Option<ITime>,
   bodies: FlexiBodyPos,
   #[serde(rename="topoVariants",skip_serializing_if = "Vec::is_empty")]
   topo_variants: Vec<LngLatKey>,
@@ -78,6 +80,7 @@ pub async fn chart_data_flexi(params: Query<InputOptions>) -> impl Responder {
   let h_systems: Vec<char> = if match_all_houses { vec![] } else { match_house_systems_chars(hsys_str) };
   let show_p2: bool = params.p2.clone().unwrap_or(0) > 0;
   let topo: u8 = params.topo.clone().unwrap_or(0);
+  let show_indian_time: bool = params.it.clone().unwrap_or(0) > 0;
   let eq: u8 = params.eq.clone().unwrap_or(2); // 0 ecliptic, 1 equatorial, 2 both
   let show_pheno_inline = eq == 4;
   let show_pheno_below = !show_pheno_inline && params.ph.clone().unwrap_or(0) > 0;
@@ -90,6 +93,8 @@ pub async fn chart_data_flexi(params: Query<InputOptions>) -> impl Responder {
   let key_string: String = params.bodies.clone().unwrap_or("".to_string());
   let keys = body_keys_str_to_keys_or(key_string, def_keys);
   let iso_mode: bool = params.iso.clone().unwrap_or(0) > 0;
+  let tz_secs = params.tzs.clone().unwrap_or(-1);
+  let offset_secs = if tz_secs == -1 { None } else { Some(tz_secs) };
   let data = match topo {
     1 => match eq {
       0 => get_bodies_ecl_topo(date.jd, to_str_refs(&keys), geo),
@@ -129,8 +134,9 @@ pub async fn chart_data_flexi(params: Query<InputOptions>) -> impl Responder {
   let pl_keys = vec!["ma", "me", "ju", "ve", "sa", "ur", "ne", "pl"];
   let station_keys: Vec<&str> = keys.iter().filter(|k| pl_keys.contains(&k.as_str())).map(|k| k.as_str()).collect();
   let planet_stations = if show_planet_stations { match_all_nextprev_planet_stations(date.jd, station_keys, iso_mode) } else{ vec![] };
+  let indian_time = if show_indian_time { Some(to_indian_time(date.jd, geo, offset_secs, iso_mode)) } else { None };
   //web::Json(json!({ "valid": valid, "date": date, "geo": geo, "bodies": bodies, "topoVariants": topo_variants, "house": house_data, "ayanamshas": ayanamshas, "transitions": transitions, "progressItems": p2, "pheno": pheno_items }))
-  Json(json!( ChartDataResult{ valid, date, geo, bodies, topo_variants, house, ayanamshas, transitions, progress_items: p2, pheno: pheno_items, planet_stations }))
+  Json(json!( ChartDataResult{ valid, date, geo, indian_time, bodies, topo_variants, house, ayanamshas, transitions, progress_items: p2, pheno: pheno_items, planet_stations }))
 }
 
 #[get("/progress")]
