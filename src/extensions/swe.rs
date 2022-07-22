@@ -182,16 +182,4 @@ pub fn set_sid_mode(iflag: i32) {
   }
 }
 
-/* prefer native implementation
- pub fn ecliptic_to_equatorial(lng: f64, lat: f64, geo_lng: f64) -> LngLat {
-  let xin: &mut [f64; 3] = &mut [lng, lat, 1f64];
-  let xout: &mut [f64; 3] = &mut [0f64, 0f64, 1f64];
-  //let eps = if geo_lng >= 0f64 {geo_lng - 90f64} else { geo_lng };
-  let eps = -1f64;
-  println!("eps: {}, geoLng: {} ", eps, geo_lng);
-  let result = unsafe {
-    swe_cotrans(xin, xout, eps);
-    xout
-  };
-  LngLat::new(result[0], result[1])
-} */
+
