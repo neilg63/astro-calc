@@ -91,10 +91,6 @@ pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool, geo_o
     Some(a_set) => Some(a_set.azimuth),
     None => None
   };
- /*  if let Some(geo) = geo_opt {
-    let tt = ecliptic_to_equatorial_basic(jd, result_ec.longitude, result_ec.latitude);
-    println!("lng {}, lat {}, ra: {} de: {}, geo {:?} : {:?}, cos 30: {}", lng, result_ec.latitude, ra, result.latitude, geo, tt, (30f64 * (std::f64::consts::PI) / 180f64).cos());
-  } */
   GrahaPos::new_extended(key, lng, result_ec.latitude,  ra, dec, result_ec.speed_longitude, result_ec.speed_latitude,  result.speed_longitude, result.speed_latitude, pheno, altitude, azimuth)
 }
 

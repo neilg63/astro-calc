@@ -1,6 +1,6 @@
 use libswe_sys::sweconst::{Bodies};
 use super::super::traits::*;
-use serde::{Serialize, Deserialize};
+// use serde::{Serialize, Deserialize};
 
 impl FromKey<Bodies> for Bodies {
   fn from_key(key: &str) -> Bodies {
@@ -58,7 +58,7 @@ impl ToKey<Bodies> for Bodies {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+/* #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GrahaInfo {
   num: u8,
   jy_num: u8,
@@ -84,4 +84,4 @@ pub struct GrahaInfo {
   mula_trikon_degrees: Vec<u16>,
   #[serde(rename="charaKarakaReverse")]
   chara_karaka_reverse: bool,
-}
+} */

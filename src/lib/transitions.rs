@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 use super::super::extensions::swe::{rise_trans};
 use libswe_sys::sweconst::{Bodies};
 use libswe_sys::swerust::{handler_swe07::{pheno_ut}};
-use super::{core::{calc_altitude_object, calc_next_prev_horizon}, traits::*, models::{geo_pos::*, general::*, graha_pos::{PhenoResult, PhenoItem}, chart::{ITime}}, transposed_transitions::{calc_transitions_from_source_refs_altitude, calc_transitions_from_source_refs_minmax}, julian_date::{julian_day_to_iso_datetime}};
+use super::{core::{calc_altitude_object, calc_next_prev_horizon}, traits::*, models::{geo_pos::*, general::*, graha_pos::{PhenoResult, PhenoItem}, i_time::*}, transposed_transitions::{calc_transitions_from_source_refs_altitude, calc_transitions_from_source_refs_minmax}, julian_date::{julian_day_to_iso_datetime}};
 
 pub enum TransitionParams {
   Rise = 1,
@@ -587,8 +587,8 @@ pub fn to_indian_time_with_transitions(jd: f64, geo: GeoPos, offset_tz_secs: Opt
   (ITime::new(jd, prev_start, base_start, base_set, next_start, current.start_mode(), offset_secs), prev.to_value_set(iso_mode), current.to_value_set(iso_mode), next.to_value_set(iso_mode), offset_secs)
 }
 
-pub fn to_indian_time(jd: f64, geo: GeoPos, offset_tz_secs: Option<i16>) -> ITime {
-  let (i_time, _, _, _, _) = to_indian_time_with_transitions(jd, geo, offset_tz_secs, false);
+pub fn to_indian_time(jd: f64, geo: GeoPos, offset_tz_secs: Option<i16>, iso_mode: bool) -> ITime {
+  let (i_time, _, _, _, _) = to_indian_time_with_transitions(jd, geo, offset_tz_secs, iso_mode);
   i_time
 }
 
