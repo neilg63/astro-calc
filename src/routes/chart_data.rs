@@ -95,25 +95,33 @@ pub async fn chart_data_flexi(params: Query<InputOptions>) -> impl Responder {
   let iso_mode: bool = params.iso.clone().unwrap_or(0) > 0;
   let tz_secs = params.tzs.clone().unwrap_or(-1);
   let offset_secs = if tz_secs == -1 { None } else { Some(tz_secs) };
+  let aya: String = params.aya.clone().unwrap_or("true_citra".to_string());
+  let sidereal: bool = params.sid.unwrap_or(0) > 0;
+  let ayanamsha = get_ayanamsha_value(date.jd, aya.as_str());
+  let aya_offset = if sidereal { ayanamsha } else { 0f64 };
   let data = match topo {
     1 => match eq {
-      0 => get_bodies_ecl_topo(date.jd, to_str_refs(&keys), geo),
+      0 => get_bodies_ecl_topo(date.jd, to_str_refs(&keys), geo, aya_offset),
       1 => get_bodies_eq_topo(date.jd, to_str_refs(&keys), geo),
-      _ => get_bodies_dual_topo(date.jd, to_str_refs(&keys), geo, show_pheno_inline),
+      _ => get_bodies_dual_topo(date.jd, to_str_refs(&keys), geo, show_pheno_inline, aya_offset),
     }
     _ => match eq {
-      0 => get_bodies_ecl_geo(date.jd, to_str_refs(&keys)),
+      0 => get_bodies_ecl_geo(date.jd, to_str_refs(&keys), aya_offset),
       1 => get_bodies_eq_geo(date.jd, to_str_refs(&keys)),
-      _ => get_bodies_dual_geo(date.jd, to_str_refs(&keys), show_pheno_inline),
+      _ => get_bodies_dual_geo(date.jd, to_str_refs(&keys), show_pheno_inline, aya_offset),
     }
   };
   let pheno_items = if show_pheno_below { get_pheno_results(date.jd, to_str_refs(&keys)) } else { vec![] };
   let mut topo_variants: Vec<LngLatKey> = Vec::new();
   if topo == 2 {
-    topo_variants = get_bodies_ecl_topo(date.jd, to_str_refs(&keys), geo).into_iter().map(|b| b.to_lng_lat_key()).collect();
+    topo_variants = get_bodies_ecl_topo(date.jd, to_str_refs(&keys), geo, aya_offset).into_iter().map(|b| b.to_lng_lat_key()).collect();
   }
   let valid = data.len() > 0;
-  let house = if match_all_houses { get_all_house_systems(date.jd, geo) } else { get_house_systems(date.jd, geo, h_systems) } ;
+  let aya_offset_val = match eq {
+    1 => 0f64,
+    _ => aya_offset
+  };
+  let house = if match_all_houses { get_all_house_systems(date.jd, geo, aya_offset_val) } else { get_house_systems(date.jd, geo, h_systems, aya_offset_val) } ;
   let ayanamshas = match aya_mode.as_str() {
     "all" => get_all_ayanamsha_values(date.jd),
     _ => get_ayanamsha_values(date.jd, to_str_refs(&aya_keys)),
@@ -135,7 +143,6 @@ pub async fn chart_data_flexi(params: Query<InputOptions>) -> impl Responder {
   let station_keys: Vec<&str> = keys.iter().filter(|k| pl_keys.contains(&k.as_str())).map(|k| k.as_str()).collect();
   let planet_stations = if show_planet_stations { match_all_nextprev_planet_stations(date.jd, station_keys, iso_mode) } else{ vec![] };
   let indian_time = if show_indian_time { Some(to_indian_time(date.jd, geo, offset_secs, iso_mode)) } else { None };
-  //web::Json(json!({ "valid": valid, "date": date, "geo": geo, "bodies": bodies, "topoVariants": topo_variants, "house": house_data, "ayanamshas": ayanamshas, "transitions": transitions, "progressItems": p2, "pheno": pheno_items }))
   Json(json!( ChartDataResult{ valid, date, geo, indian_time, bodies, topo_variants, house, ayanamshas, transitions, progress_items: p2, pheno: pheno_items, planet_stations }))
 }
 
@@ -160,11 +167,15 @@ async fn bodies_progress(params: Query<InputOptions>) -> impl Responder {
   let keys = body_keys_str_to_keys_or(key_string, def_keys);
   let geo_opt = if topo { Some(geo) } else { None };
   let (aya_keys, aya_mode) = to_ayanamsha_keys(&params, "");
+  let aya: String = params.aya.clone().unwrap_or("true_citra".to_string());
+  let sidereal: bool = params.sid.unwrap_or(0) > 0;
+  let ayanamsha = get_ayanamsha_value(date.jd, aya.as_str());
+  let aya_offset = if sidereal { ayanamsha } else { 0f64 };
   let ayanamshas = match aya_mode.as_str() {
     "all" => get_all_ayanamsha_values(date.jd),
     _ => get_ayanamsha_values(date.jd, to_str_refs(&aya_keys)),
   };
-  let data = calc_bodies_positions_jd(date.jd, to_str_refs(&keys), days_spanned, per_day_f64, geo_opt, eq, iso_mode);
+  let data = calc_bodies_positions_jd(date.jd, to_str_refs(&keys), days_spanned, per_day_f64, geo_opt, eq, iso_mode, aya_offset);
   let frequency = if per_day_f64 < 1f64 { format!("{} days", day_span) } else { format!("{} per day", per_day_f64) };
   let coord_system = build_coord_system_label(eq, topo);
   thread::sleep(micro_interval);
