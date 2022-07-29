@@ -6,7 +6,7 @@ use super::models::{graha_pos::*, geo_pos::*, general::*, houses::{calc_ascendan
 use super::super::extensions::swe::{azalt, set_topo, set_sid_mode, get_ayanamsha};
 use std::collections::{HashMap};
 
-pub fn calc_body_jd(jd: f64, key: &str, sidereal: bool, topo: bool) -> GrahaPos {
+pub fn calc_body_jd(jd: f64, key: &str, sidereal: bool, topo: bool, aya_offset: f64) -> GrahaPos {
   let combo: i32;
   let speed_flag = OptionalFlag::Speed as i32;
   if topo {
@@ -24,7 +24,9 @@ pub fn calc_body_jd(jd: f64, key: &str, sidereal: bool, topo: bool) -> GrahaPos 
     }
   }
   let result = calc_ut(jd, Bodies::from_key(key), combo);
-  let lng = adjust_lng_by_body_key(key, result.longitude);
+  // only apply for ecliptic lng if the sidereal mode is not applied via SE in conjunction with set_sid_mode
+  let aya_offset_val = if sidereal { 0f64 } else { aya_offset };
+  let lng = subtract_360(adjust_lng_by_body_key(key, result.longitude), aya_offset_val);
   GrahaPos::new(key, lng, result.latitude, result.speed_longitude, result.speed_latitude)
 }
 
@@ -54,7 +56,7 @@ pub fn calc_body_eq_jd_swe(jd: f64, key: &str, topo: bool) -> GrahaPos {
 pub fn calc_body_eq_jd(jd: f64, key: &str, topo: bool) -> GrahaPos {
   match key {
     "ke" => {
-      let pos = calc_body_jd(jd, key, false, topo);
+      let pos = calc_body_jd(jd, key, false, topo, 0f64);
       let eq_pos = ecliptic_to_equatorial_basic(jd, pos.lng, pos.lat);
       GrahaPos::new_eq(key,eq_pos.lng, eq_pos.lat,pos.lng_speed, pos.lat_speed)
     },
@@ -62,7 +64,7 @@ pub fn calc_body_eq_jd(jd: f64, key: &str, topo: bool) -> GrahaPos {
   }
 }
 
-pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool, geo_opt: Option<GeoPos>) -> GrahaPos {
+pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool, geo_opt: Option<GeoPos>, aya_offset: f64) -> GrahaPos {
   let combo: i32;
   //let eq_flag = OptionalFlag::SEFLG_EQUATORIAL;
   let eq_flag = OptionalFlag::EquatorialPosition as i32;
@@ -76,7 +78,7 @@ pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool, geo_o
   let result = calc_ut(jd, Bodies::from_key(key), combo);
   let result_ec = calc_ut(jd, Bodies::from_key(key), combo_geo);
   let pheno = if show_pheno { Some(get_pheno_result(jd, key, 0i32)) } else { None };
-  let lng = adjust_lng_by_body_key(key, result_ec.longitude);
+  let lng = subtract_360(adjust_lng_by_body_key(key, result_ec.longitude), aya_offset);
   // let ra = adjust_lng_by_body_key(key, result.longitude);
   let (ra, dec) = adjust_ra_dec_by_body_key(key, jd, result.longitude, result.latitude, result_ec.longitude, result_ec.latitude);
   let altitude_set = match geo_opt {
@@ -94,13 +96,13 @@ pub fn calc_body_dual_jd(jd: f64, key: &str, topo: bool, show_pheno: bool, geo_o
   GrahaPos::new_extended(key, lng, result_ec.latitude,  ra, dec, result_ec.speed_longitude, result_ec.speed_latitude,  result.speed_longitude, result.speed_latitude, pheno, altitude, azimuth)
 }
 
-pub fn calc_body_dual_jd_geo(jd: f64, key: &str, show_pheno: bool) -> GrahaPos {
-  calc_body_dual_jd(jd, key, false, show_pheno, None)
+pub fn calc_body_dual_jd_geo(jd: f64, key: &str, show_pheno: bool, aya_offset: f64) -> GrahaPos {
+  calc_body_dual_jd(jd, key, false, show_pheno, None, aya_offset)
 }
 
-pub fn calc_body_dual_jd_topo(jd: f64, key: &str, geo: GeoPos, show_pheno: bool) -> GrahaPos {
+pub fn calc_body_dual_jd_topo(jd: f64, key: &str, geo: GeoPos, show_pheno: bool, aya_offset: f64) -> GrahaPos {
   set_topo(geo.lat, geo.lng, geo.alt);
-  calc_body_dual_jd(jd, key, true, show_pheno, Some(geo))
+  calc_body_dual_jd(jd, key, true, show_pheno, Some(geo), aya_offset)
 }
 
 pub fn calc_body_eq_jd_topo(jd: f64, key: &str, geo: GeoPos) -> GrahaPos {
@@ -111,8 +113,8 @@ pub fn calc_body_eq_jd_topo(jd: f64, key: &str, geo: GeoPos) -> GrahaPos {
 /*
  Get tropical geocentric coordinates
 */
-pub fn calc_body_jd_geo(jd: f64, key: &str) -> GrahaPos {
-  calc_body_jd(jd, key, false, false)
+pub fn calc_body_jd_geo(jd: f64, key: &str, aya_offset: f64) -> GrahaPos {
+  calc_body_jd(jd, key, false, false, aya_offset)
 }
 
 /*
@@ -125,7 +127,7 @@ pub fn calc_body_positions_jd_geo(jd_start: f64, key: &str, days: i32, num_per_d
   let increment = 1f64 / num_per_day;
   for i in 0..max {
     let curr_jd = jd_start + (i as f64 * increment);
-    let graha_pos = calc_body_jd_geo(curr_jd, key);
+    let graha_pos = calc_body_jd_geo(curr_jd, key, 0f64);
     items.push(GrahaPosItem::new(curr_jd, graha_pos));
   }
   items
@@ -134,7 +136,7 @@ pub fn calc_body_positions_jd_geo(jd_start: f64, key: &str, days: i32, num_per_d
 /*
  Get set of tropical geocentric coordinates for groups of celestial bodies
 */
-pub fn calc_bodies_positions_jd(jd_start: f64, keys: Vec<&str>, days: u16, num_per_day: f64, geo: Option<GeoPos>, eq: bool, iso_mode: bool) -> Vec<GrahaPosSet> {
+pub fn calc_bodies_positions_jd(jd_start: f64, keys: Vec<&str>, days: u16, num_per_day: f64, geo: Option<GeoPos>, eq: bool, iso_mode: bool, aya_offset: f64) -> Vec<GrahaPosSet> {
   let mut items: Vec<GrahaPosSet> = Vec::new();
   let max_f64 = floor(days as f64 * num_per_day, 0);
   let max = max_f64 as i32;
@@ -153,8 +155,8 @@ pub fn calc_bodies_positions_jd(jd_start: f64, keys: Vec<&str>, days: u16, num_p
           _ => calc_body_eq_jd(curr_jd, key, false),
         },
         _ => match topo {
-          true => calc_body_jd_topo(curr_jd, key, geo.unwrap()),
-          _ => calc_body_jd_geo(curr_jd, key),
+          true => calc_body_jd_topo(curr_jd, key, geo.unwrap(), aya_offset),
+          _ => calc_body_jd_geo(curr_jd, key, aya_offset),
         }
       };
       bodies.push(graha_pos);
@@ -173,15 +175,15 @@ pub fn calc_bodies_positions_jd(jd_start: f64, keys: Vec<&str>, days: u16, num_p
 */
 pub fn calc_body_jd_geo_sidereal(jd: f64, key: &str, aya_key: &str) -> GrahaPos {
   set_sid_mode(Ayanamsha::from_key(aya_key).as_i32());
-  calc_body_jd(jd, key, true, false)
+  calc_body_jd(jd, key, true, false, 0f64)
 }
 
 /*
  Get tropical topocentric coordinates with geo-coordinates
 */
-pub fn calc_body_jd_topo(jd: f64, key: &str, geo: GeoPos) -> GrahaPos {
+pub fn calc_body_jd_topo(jd: f64, key: &str, geo: GeoPos, aya_offset: f64) -> GrahaPos {
   set_topo(geo.lat, geo.lng, geo.alt);
-  calc_body_jd(jd, key, false, true)
+  calc_body_jd(jd, key, false, true, aya_offset)
 }
 
 /*
@@ -190,25 +192,25 @@ pub fn calc_body_jd_topo(jd: f64, key: &str, geo: GeoPos) -> GrahaPos {
 pub fn calc_body_jd_topo_sidereal(jd: f64, key: &str, geo: GeoPos, aya_key: &str) -> GrahaPos {
   set_topo(geo.lat, geo.lng, geo.alt);
   set_sid_mode(Ayanamsha::from_key(aya_key).as_i32());
-  calc_body_jd(jd, key, false, true)
+  calc_body_jd(jd, key, false, true, 0f64)
 }
 
 /*
   Fetch a set of
 */
-pub fn get_bodies_dual_geo(jd: f64, keys: Vec<&str>, show_pheno: bool) -> Vec<GrahaPos> {
+pub fn get_bodies_dual_geo(jd: f64, keys: Vec<&str>, show_pheno: bool, aya_offset: f64) -> Vec<GrahaPos> {
   let mut bodies: Vec<GrahaPos> = Vec::new();
   for key in keys {
-    let result = calc_body_dual_jd_geo(jd, key, show_pheno);
+    let result = calc_body_dual_jd_geo(jd, key, show_pheno, aya_offset);
     bodies.push(result);
   }
   bodies
 }
 
-pub fn get_bodies_ecl_geo(jd: f64, keys: Vec<&str>) -> Vec<GrahaPos> {
+pub fn get_bodies_ecl_geo(jd: f64, keys: Vec<&str>, aya_offset: f64) -> Vec<GrahaPos> {
   let mut bodies: Vec<GrahaPos> = Vec::new();
   for key in keys {
-    let result = calc_body_jd_geo(jd, key);
+    let result = calc_body_jd_geo(jd, key, aya_offset);
     bodies.push(result);
   }
   bodies
@@ -232,10 +234,10 @@ pub fn get_bodies_eq_topo(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<GrahaPos
   bodies
 }
 
-pub fn get_bodies_ecl_topo(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<GrahaPos> {
+pub fn get_bodies_ecl_topo(jd: f64, keys: Vec<&str>, geo: GeoPos, aya_offset: f64) -> Vec<GrahaPos> {
   let mut bodies: Vec<GrahaPos> = Vec::new();
   for key in keys {
-    let result = calc_body_jd_topo(jd, key, geo);
+    let result = calc_body_jd_topo(jd, key, geo, aya_offset);
     bodies.push(result);
   }
   bodies
@@ -249,7 +251,7 @@ pub fn get_bodies_p2(jd: f64, keys: Vec<String>, start_year: u32, num_years: u16
     let ayanamsha = get_ayanamsha_value(ref_pd, "true_citra");
     let mut body_items: Vec<KeyNumValue> = Vec::new();
     for key in keys.clone() {
-      let result = calc_body_jd_geo(jd, key.as_str());
+      let result = calc_body_jd_geo(jd, key.as_str(), 0f64);
       body_items.push(KeyNumValue::new(key.as_str(), result.lng));
     }
     items.push(ProgressItemSet::new(ref_pd, ref_jd, body_items, ayanamsha));
@@ -265,14 +267,15 @@ pub fn get_body_longitudes(jd: f64, geo: GeoPos, mode: &str, equatorial: bool, a
       _ => get_bodies_eq_geo(jd, keys),
     },
     _ => match mode {
-      "topo" => get_bodies_ecl_topo(jd, keys, geo),
-      _ => get_bodies_ecl_geo(jd, keys),
+      "topo" => get_bodies_ecl_topo(jd, keys, geo, aya_offset),
+      _ => get_bodies_ecl_geo(jd, keys, aya_offset),
     }
   };
-  items.insert("as".to_string(), subtract_360(calc_ascendant(jd, geo), aya_offset));
+  let aya_offset_val = if equatorial { 0f64 } else { aya_offset };
+  items.insert("as".to_string(), subtract_360(calc_ascendant(jd, geo), aya_offset_val));
   for body in bodies {
     let lng = if equatorial { body.rect_ascension } else { body.lng };
-    items.insert(body.key, subtract_360(lng, aya_offset));
+    items.insert(body.key, lng);
   }
   items
 }
@@ -294,10 +297,10 @@ pub fn get_body_longitudes_eq_topo(jd: f64, geo: GeoPos, aya_offset: f64, keys: 
   get_body_longitudes(jd, geo, "topo", true, aya_offset, keys)
 }
 
-pub fn get_bodies_dual_topo(jd: f64, keys: Vec<&str>, geo: GeoPos, show_pheno: bool) -> Vec<GrahaPos> {
+pub fn get_bodies_dual_topo(jd: f64, keys: Vec<&str>, geo: GeoPos, show_pheno: bool, aya_offset: f64) -> Vec<GrahaPos> {
   let mut bodies: Vec<GrahaPos> = Vec::new();
   for key in keys {
-    let result = calc_body_dual_jd_topo(jd, key, geo, show_pheno);
+    let result = calc_body_dual_jd_topo(jd, key, geo, show_pheno, aya_offset);
     bodies.push(result);
   }
   bodies
@@ -324,7 +327,7 @@ pub fn calc_altitude_tuple(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f
 pub fn calc_altitude_object(tjd_ut: f64, is_equal: bool, geo_lat: f64, geo_lng: f64, key: &str) -> f64 {
   let pos = match is_equal {
     true => calc_body_eq_jd_topo(tjd_ut, key, GeoPos::simple(geo_lat, geo_lng)),
-    _ => calc_body_jd_topo(tjd_ut, key, GeoPos::simple(geo_lat, geo_lng))
+    _ => calc_body_jd_topo(tjd_ut, key, GeoPos::simple(geo_lat, geo_lng), 0f64)
   };
   calc_altitude(tjd_ut, is_equal, geo_lat, geo_lng, pos.lng, pos.lat)
 }

@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use libswe_sys::swerust::{handler_swe14::*};
 use super::{geo_pos::*};
-use super::super::core::{calc_altitude_tuple, ecliptic_to_equatorial_tuple};
+use super::super::{core::{calc_altitude_tuple, ecliptic_to_equatorial_tuple}, math_funcs::{recalc_houses_by_system, subtract_360}};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct AscMc {
@@ -69,6 +69,12 @@ impl AscMc {
       mc_dec
     }
   }
+
+  pub fn apply_ayanamsha(&mut self, aya_offset: f64) {
+    self.ascendant = subtract_360(self.ascendant, aya_offset);
+    self.mc = subtract_360(self.ascendant, aya_offset);
+  }
+
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -136,7 +142,8 @@ pub struct HouseSetData {
 }
 
 impl HouseSetData {
-  pub fn new(points: AscMc, sets: Vec<HouseSet>) -> HouseSetData { 
+  pub fn new(mut points: AscMc, sets: Vec<HouseSet>, aya_offset: f64) -> HouseSetData { 
+    points.apply_ayanamsha(aya_offset);
     HouseSetData{ points, sets }
   }
 }
@@ -164,7 +171,7 @@ pub fn match_house_systems_chars(ref_str: String) -> Vec<char> {
   ref_chars.iter().filter(|c| all_chars.contains(c)).map(|c| *c).collect::<Vec<char>>()
 }
 
-pub fn get_house_systems(jd: f64, geo: GeoPos, keys: Vec<char>) -> HouseSetData {
+pub fn get_house_systems(jd: f64, geo: GeoPos, keys: Vec<char>, aya_offset: f64) -> HouseSetData {
   let house_systems:Vec<char> = houses_system_chars();
   let match_all = keys.len() == 1 && keys[0] == 'a';
   let match_whole_only = keys.len() == 1 && keys[0] == 'W' || keys.len() < 1;
@@ -180,13 +187,13 @@ pub fn get_house_systems(jd: f64, geo: GeoPos, keys: Vec<char>) -> HouseSetData 
         points = hd.points;
         points_matched = true;
       }
-      
-      sets.push(HouseSet::new(key, hd.houses))
+      let house_lngs = if aya_offset == 0f64 { hd.houses } else { recalc_houses_by_system(hd.houses, aya_offset, key) };
+      sets.push(HouseSet::new(key, house_lngs))
     }
   }
-  HouseSetData::new(points, sets)
+  HouseSetData::new(points, sets, aya_offset)
 }
 
-pub fn get_all_house_systems(jd: f64, geo: GeoPos) -> HouseSetData {
-  get_house_systems(jd, geo, vec!['a'])
+pub fn get_all_house_systems(jd: f64, geo: GeoPos, aya_offset: f64) -> HouseSetData {
+  get_house_systems(jd, geo, vec!['a'], aya_offset)
 }

@@ -192,7 +192,7 @@ pub fn calc_transposed_object_transitions (
     let mut sample_spd = lng_speed;
     let mut lat_spd = 0f64;
     if resample_speed {
-      let sample_body = calc_body_jd_topo(jd, sample_key, geo);
+      let sample_body = calc_body_jd_topo(jd, sample_key, geo, 0f64);
       sample_spd = sample_body.lng_speed;
       lat_spd = sample_body.lat_speed;
     }
@@ -300,8 +300,8 @@ pub fn calc_transposed_graha_transitions_from_source_refs(mode: &str, jd_start: 
   let mut key_num_sets: Vec<KeyNumValueSet> = Vec::new();
   for key in keys {
     let graha_pos = match mode {
-      "topo" => calc_body_jd_topo(jd_historic, key.as_str(), geo_historic),
-      _ => calc_body_jd_geo(jd_historic, key.as_str())
+      "topo" => calc_body_jd_topo(jd_historic, key.as_str(), geo_historic, 0f64),
+      _ => calc_body_jd_geo(jd_historic, key.as_str(), 0f64)
     };
     let mut items: Vec<KeyNumValue> = Vec::new();
     for i in 0..days {
@@ -335,7 +335,7 @@ fn extract_from_alt_samples(alt_samples: &Vec<AltitudeSample>, key: &str) -> Alt
  * Alternative method to fetch transitions for near polar latitudes (> +60 and < -60) based on altitudes
 */
 pub fn calc_transitions_from_source_refs_altitude(jd: f64, key: &str, geo: GeoPos) -> TransitionSet {
-  let pos = calc_body_jd_topo(jd, key, geo);
+  let pos = calc_body_jd_topo(jd, key, geo, 0f64);
   let alt_samples = calc_transposed_object_transitions(jd, geo, pos.lng, pos.lat, pos.lng_speed, 5, TransitionFilter::All, key, true);
   let rise = extract_from_alt_samples(&alt_samples, "rise");
   let set = extract_from_alt_samples(&alt_samples, "set");
@@ -353,7 +353,7 @@ pub fn calc_transitions_from_source_refs_altitude(jd: f64, key: &str, geo: GeoPo
  * Alternative method to fetch transitions for near polar latitudes (> +60 and < -60) with min and max altitudes
 */
 pub fn calc_transitions_from_source_refs_minmax(jd: f64, key: &str, geo: GeoPos) -> AltTransitionSet {
-  let pos = calc_body_jd_topo(jd, key, geo);
+  let pos = calc_body_jd_topo(jd, key, geo, 0f64);
   let alt_samples = calc_transposed_object_transitions(jd, geo, pos.lng, pos.lat, pos.lng_speed, 5, TransitionFilter::All, key, false);
   let rise = extract_from_alt_samples(&alt_samples, "rise");
   let set = extract_from_alt_samples(&alt_samples, "set");
