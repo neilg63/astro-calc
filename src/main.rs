@@ -2,6 +2,7 @@ mod lib;
 mod extensions;
 mod constants;
 mod query_params;
+mod post_params;
 mod routes;
 mod help;
 
@@ -105,6 +106,7 @@ async fn main()  -> std::io::Result<()> {
           .service(test_mcs)
           .service(body_transposed_transitions_range)
           .service(planet_stations_progress)
+          .service(body_transposed_transitions_from_chart)
           .route("/{sec1}", web::get().to(route_not_found))
           .route("/{sec1}/{sec2}", web::get().to(route_not_found))
           .route("/{sec1}/{sec2}/{sec3}", web::get().to(route_not_found))
