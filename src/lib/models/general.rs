@@ -1,7 +1,8 @@
 use ::serde::{Serialize, Deserialize};
 use super::super::julian_date::{julian_day_to_iso_datetime};
+use super::geo_pos::GeoPos;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, PartialOrd)]
 pub struct KeyNumValue {
   pub key: String,
   pub value: f64,
@@ -27,6 +28,24 @@ impl KeyNumValue {
         _ => FlexiValue::NumValue(KeyNumValue::new(self.key.as_str(), self.value)),
       }
     }
+  }
+
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, PartialOrd)]
+pub struct KeyNumRange {
+  pub key: String,
+  pub start: f64,
+  pub end: f64,
+}
+
+impl KeyNumRange {
+  pub fn new(key: &str, start: f64, end: f64) -> KeyNumRange {
+    KeyNumRange { key: key.to_string(), start, end }
+  }
+
+  pub fn duration(&self) -> f64 {
+    self.end - self.start
   }
 
 }
@@ -136,6 +155,9 @@ impl LngLat {
   }
   pub fn empty() -> LngLat {
     LngLat { lng: -1f64, lat: -1f64 }
+  }
+  pub fn to_geo_pos(&self) -> GeoPos {
+    GeoPos::new(self.lat, self.lng, 10f64)
   }
 }
 

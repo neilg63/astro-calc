@@ -558,7 +558,7 @@ pub fn get_pheno_results(jd: f64, keys: Vec<&str>) -> Vec<PhenoItem> {
   items
 }
 
-pub fn to_indian_time_with_transitions(jd: f64, geo: GeoPos, offset_tz_secs: Option<i16>, iso_mode: bool) -> (ITime, AltTransitionValueSet, AltTransitionValueSet, AltTransitionValueSet, i16) {
+pub fn to_indian_time_with_transitions(jd: f64, geo: GeoPos, offset_tz_secs: Option<i32>, iso_mode: bool) -> (ITime, AltTransitionValueSet, AltTransitionValueSet, AltTransitionValueSet, i32) {
   let current = calc_transition_set_extended(jd, Bodies::from_key("su"), geo.lat, geo.lng);
   let prev = calc_transition_set_alt(jd - 1f64, Bodies::from_key("su"), geo.lat, geo.lng);
   let next = calc_transition_set_alt(jd + 1f64, Bodies::from_key("su"), geo.lat, geo.lng);
@@ -583,15 +583,34 @@ pub fn to_indian_time_with_transitions(jd: f64, geo: GeoPos, offset_tz_secs: Opt
     1 => if current.ic < jd { next.ic} else { current.ic },
     _ => next.rise,
   };
-  let offset_secs = if offset_tz_secs != None { offset_tz_secs.unwrap() } else { (geo.lng * 240f64) as i16 };
+  let offset_secs = if offset_tz_secs != None { offset_tz_secs.unwrap() } else { (geo.lng * 240f64) as i32 };
   (ITime::new(jd, prev_start, base_start, base_set, next_start, current.start_mode(), offset_secs), prev.to_value_set(iso_mode), current.to_value_set(iso_mode), next.to_value_set(iso_mode), offset_secs)
 }
 
-pub fn to_indian_time(jd: f64, geo: GeoPos, offset_tz_secs: Option<i16>, iso_mode: bool) -> ITime {
+pub fn to_indian_time(jd: f64, geo: GeoPos, offset_tz_secs: Option<i32>, iso_mode: bool) -> ITime {
   let (i_time, _, _, _, _) = to_indian_time_with_transitions(jd, geo, offset_tz_secs, iso_mode);
   i_time
 }
 
+pub fn calc_solar_periods(jd: f64, geo: GeoPos, offset_secs: i32) -> Vec<KeyNumRange> {
+  let mut periods: Vec<KeyNumRange> = vec![];
+  //let (iItime, prev, curr, next, tzs) = to_indian_time_with_transitions(jd, geo, Some(offset_secs), false);
+  let start_jd = start_jd_geo(jd, geo.lng) - 1f64;
+  let mut prev_set = 0f64;
+  for i in 0..3 {
+    let ref_jd = start_jd + (i as f64);
+    let alt_set: AltTransitionSet = calc_transition_set_alt(ref_jd, Bodies::Sun, geo.lat, geo.lng);
+    if alt_set.set > 1_000_000f64 && alt_set.set > alt_set.rise && alt_set.rise > 1_000_000f64 {
+      periods.push(KeyNumRange::new("day", alt_set.rise, alt_set.set));
+    }
+    if prev_set > 1_000_000f64 && prev_set < alt_set.rise {
+      periods.push(KeyNumRange::new("night", prev_set, alt_set.rise));
+    }
+    prev_set = alt_set.set;
+  }
+  periods.sort_by(|a,b| a.start.partial_cmp(&b.start).unwrap());
+  periods
+}
 
 #[cfg(test)]
 mod tests {

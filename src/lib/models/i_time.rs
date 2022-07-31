@@ -24,7 +24,7 @@ pub struct ITime {
 
 impl ITime {
 
-  pub fn new(ref_jd: f64, prev_rise_jd: f64, rise_jd: f64, set_jd: f64, next_rise_jd: f64, start_mode: i8, offset_secs: i16) -> ITime {
+  pub fn new(ref_jd: f64, prev_rise_jd: f64, rise_jd: f64, set_jd: f64, next_rise_jd: f64, start_mode: i8, offset_secs: i32) -> ITime {
     let prev_start = ref_jd < rise_jd;
     let day_before = prev_start && start_mode == 0;
     let is_day_time = (!day_before && ref_jd < set_jd && start_mode != -1) || start_mode == 1;

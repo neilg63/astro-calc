@@ -10,7 +10,6 @@ pub struct InputOptions {
   pub dt2: Option<String>, // secondary UTC date string 
   pub dtl2: Option<String>, // secondary date string in local time (requires offset)
   pub jd2: Option<f64>, // secondary jd as a float
-  pub offset: Option<i32>, // offset is seconds from UTC
   pub bodies: Option<String>, // either a comma separated list of required 2-letter celestial body keys or body group keys
   pub topo: Option<u8>, // 0 = geocentric, 1 topocentric, 2 both, default 0
   pub eq: Option<u8>, // 0 = ecliptic, 1 equatorial, 2 both, both 3 with altitude/azimuth, 4 with inline planetary phenomena
@@ -30,28 +29,30 @@ pub struct InputOptions {
   pub p2start: Option<u16>, // p2 start year (overrides p2 ago)
   pub p2py: Option<u8>, // num per year
   pub p2bodies: Option<String>, // p2 body keys from su, mo, ma, me, ju, ve, sa
-  pub aya: Option<String>, // ayanamshas
-  pub amode: Option<String>, // apply referenced sidereal type (ayanamsha) to all longitudes
-  pub sid: Option<u8>, // 0 tropical longitudes, 1 sidereal longitudes
+  pub aya: Option<String>, // comma-separated list ayanamshas to be calculated. The first may be applied to ecliptic longitudes via sid=1
+  //pub amode: Option<String>, // apply referenced sidereal type (ayanamsha) to all longitudes
+  pub sid: Option<u8>, // 0 tropical longitudes, 1 sidereal longitudes of first reference ayanamsha (via aya)
   pub hsys: Option<String>, // comma-separated list of letters representing house systems to be returned. Defaults to W for whole house system
   pub retro: Option<u8>, // show planet stations (retrograde, peak), 0 no, 1 yes
   pub iso: Option<u8>, // 0 show JD, 1 show ISO UTC
-  pub tzs: Option<i16>, // offset in seconds from UTC
+  //pub offset: Option<i32>, // offset is seconds from UTC
+  pub tzs: Option<i32>, // offset in seconds from UTC
 }
 
-pub fn to_ayanamsha_keys(params: &Query<InputOptions>, def_val: &str) -> (Vec<String>, String) {
+pub fn to_ayanamsha_keys(params: &Query<InputOptions>, def_val: &str) -> (Vec<String>, String, String) {
   let aya: String = params.aya.clone().unwrap_or(def_val.to_string());
-  
-  let aya_keys = match aya.as_str() {
+  let aya_keys: Vec<String> = match aya.as_str() {
     "all" => vec![],
     "core" => vec!["true_citra", "lahiri", "krishnamurti"],
     _ => if aya.len() > 1 { aya.as_str().split(",").collect() } else { vec![] },
   }.into_iter().map(|k| k.to_owned()).collect();
+
+  let first = if aya_keys.clone().len() < 1 { "-" .to_string()} else { aya_keys.first().unwrap().to_string() };
   let mode = match aya.as_str() {
     "all"  | "core" => aya,
     _ => "keys".to_string(),
   };
-  (aya_keys, mode)
+  (aya_keys, mode, first)
 }
 
 pub fn to_date_object_by_num(params: &Query<InputOptions>, num: u8) -> DateInfo {

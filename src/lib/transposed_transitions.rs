@@ -293,8 +293,28 @@ pub fn calc_transposed_graha_transitions_from_source_positions(jd_start: f64, ge
   key_num_sets
 }
 
+pub fn build_transposed_transition_set_from_pos(jd_start: f64, geo: GeoPos, pos: BodyPos, days: u16) -> KeyNumValueSet {
+  let mut items: Vec<KeyNumValue> = Vec::new();
+    for i in 0..days {
+      let ref_jd = jd_start + i as f64;
+      let tr_samples: Vec<AltitudeSample> = calc_transposed_object_transitions(
+        ref_jd,
+        geo,
+        pos.lng,
+        pos.lat,
+        pos.lng_speed,
+        5,
+        TransitionFilter::All,
+        pos.key.as_str(),
+        true
+      );
+      let mut new_items: Vec<KeyNumValue> = tr_samples.iter().map(|tr| tr.to_key_num()).collect();
+      items.append(&mut new_items);
+    }
+    KeyNumValueSet::new(pos.key.as_str(), items)
+}
 /*
-  Calculate transposed transitions from a set of real body positions with a different time and place
+  Calculate transposed transitions from a set of historic body references with a different time and place
 */
 pub fn calc_transposed_graha_transitions_from_source_refs(mode: &str, jd_start: f64, geo: GeoPos, jd_historic: f64, geo_historic: GeoPos, keys: Vec<String>, days: u16) -> Vec<KeyNumValueSet> {
   let mut key_num_sets: Vec<KeyNumValueSet> = Vec::new();
@@ -303,24 +323,19 @@ pub fn calc_transposed_graha_transitions_from_source_refs(mode: &str, jd_start: 
       "topo" => calc_body_jd_topo(jd_historic, key.as_str(), geo_historic, 0f64),
       _ => calc_body_jd_geo(jd_historic, key.as_str(), 0f64)
     };
-    let mut items: Vec<KeyNumValue> = Vec::new();
-    for i in 0..days {
-      let ref_jd = jd_start + i as f64;
-      let tr_samples: Vec<AltitudeSample> = calc_transposed_object_transitions(
-        ref_jd,
-        geo,
-        graha_pos.lng,
-        graha_pos.lat,
-        graha_pos.lng_speed,
-        5,
-        TransitionFilter::All,
-        graha_pos.key.as_str(),
-        true
-      );
-      let mut new_items: Vec<KeyNumValue> = tr_samples.iter().map(|tr| tr.to_key_num()).collect();
-      items.append(&mut new_items);
-    }
-    let tr_key_set: KeyNumValueSet = KeyNumValueSet::new(graha_pos.key.as_str(), items);
+    let tr_key_set = build_transposed_transition_set_from_pos(jd_start, geo, graha_pos.to_body("ecl"), days);
+    key_num_sets.push(tr_key_set);
+  }
+  key_num_sets
+}
+
+/*
+  Calculate transposed transitions from a set of real body positions with a different time and place
+*/
+pub fn calc_transposed_transitions_from_source_body_positions(jd_start: f64, geo: GeoPos, positions: Vec<BodyPos>, days: u16) -> Vec<KeyNumValueSet> {
+  let mut key_num_sets: Vec<KeyNumValueSet> = Vec::new();
+  for pos in positions {
+    let tr_key_set = build_transposed_transition_set_from_pos(jd_start, geo, pos, days);
     key_num_sets.push(tr_key_set);
   }
   key_num_sets
@@ -336,7 +351,30 @@ fn extract_from_alt_samples(alt_samples: &Vec<AltitudeSample>, key: &str) -> Alt
 */
 pub fn calc_transitions_from_source_refs_altitude(jd: f64, key: &str, geo: GeoPos) -> TransitionSet {
   let pos = calc_body_jd_topo(jd, key, geo, 0f64);
-  let alt_samples = calc_transposed_object_transitions(jd, geo, pos.lng, pos.lat, pos.lng_speed, 5, TransitionFilter::All, key, true);
+  calc_transition_set_from_lng_lat_speed(jd, key, geo, pos.lng, pos.lat, pos.lng_speed)
+}
+
+/**
+ * Calculate transition set from any arbitrary body position
+*/
+pub fn calc_transitions_from_source_body_pos(jd: f64, key: &str, geo: GeoPos, pos: BodyPos) -> TransitionSet {
+  calc_transition_set_from_lng_lat_speed(jd, key, geo, pos.lng, pos.lat, pos.lng_speed)
+}
+
+/**
+ * Calculate transition set from a vector of arbitrary body positions
+*/
+pub fn calc_transition_sets_from_body_positions(jd: f64, geo: GeoPos, positions: Vec<BodyPos>) -> Vec<TransitionSet> {
+  let mut items: Vec<TransitionSet> = vec![];
+  for pos in positions {
+    let item = calc_transition_set_from_lng_lat_speed(jd, pos.key.as_str(), geo, pos.lng, pos.lat, pos.lng_speed);
+    items.push(item);
+  }
+  items
+}
+
+pub fn calc_transition_set_from_lng_lat_speed(jd: f64, key: &str, geo: GeoPos, lng: f64, lat: f64, lng_speed: f64) -> TransitionSet {
+  let alt_samples = calc_transposed_object_transitions(jd, geo, lng, lat, lng_speed, 5, TransitionFilter::All, key, true);
   let rise = extract_from_alt_samples(&alt_samples, "rise");
   let set = extract_from_alt_samples(&alt_samples, "set");
   let mc = extract_from_alt_samples(&alt_samples, "mc");

@@ -1,9 +1,16 @@
 use std::{thread, time};
 use serde_json::*;
 use std::collections::HashMap;
-use super::super::lib::{traits::{FromKey},transitions::*, transposed_transitions::{calc_transposed_graha_transitions_from_source_refs_topo, calc_transposed_graha_transitions_from_source_refs_geo}, models::{geo_pos::*, general::*}, utils::{converters::*}};
 use actix_web::{get, post, Responder,web::{Query, Json}};
 use super::super::{query_params::*, reset_ephemeris_path, post_params::*};
+use super::super::lib::{
+  traits::{FromKey},
+  julian_date::{current_jd},
+  transitions::*,
+  transposed_transitions::{calc_transposed_graha_transitions_from_source_refs_topo, calc_transposed_graha_transitions_from_source_refs_geo, calc_transposed_transitions_from_source_body_positions},
+  models::{geo_pos::*, general::*, graha_pos::{BodyPos}},
+  utils::{converters::*}
+};
 use libswe_sys::sweconst::{Bodies};
 
 #[get("/transitions")]
@@ -80,32 +87,23 @@ async fn body_transposed_transitions_range(params: Query<InputOptions>) -> impl 
 }
 
 #[post("/transposed-transitions-chart")]
-async fn body_transposed_transitions_from_chart(mut payload: Json<PostOptions>) -> impl Responder {
+async fn body_transposed_transitions_from_chart(payload: Json<PostOptions>) -> impl Responder {
   reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(50);
-  /* let dateref: String = params.dt2.clone().unwrap_or(current_datetime_string());
-  let historic_dt = DateInfo::new(dateref.to_string().as_str()); */
-  /* let historic_dt = to_date_object_2(&params);
-  let current_dt = to_date_object(&params);
-  let current_loc: String = params.loc.clone().unwrap_or("0,0".to_string());
-  let current_geo = if let Some(geo_pos) = loc_string_to_geo(current_loc.as_str()) { geo_pos } else { GeoPos::zero() };
-  let show_transitions: bool = params.ct.clone().unwrap_or(0) > 0;
-  let def_keys = vec!["su", "mo", "ma", "me", "ju", "ve", "sa"];
-  let key_string: String = params.bodies.clone().unwrap_or("".to_string());
-  let keys = body_keys_str_to_keys_or(key_string, def_keys);
-  let days_int = params.days.unwrap_or(1u16);
-  let num_days = if days_int >= 1 { days_int } else { 1u16 };
-  let transitions = calc_transposed_graha_transitions_from_source_refs_geo(current_dt.jd, current_geo, historic_dt.jd, historic_geo, keys.clone(), num_days);
-  let valid = transitions.len() > 0;
-  let current_transitions:  Vec<KeyNumValueSet> = if show_transitions { get_transition_sets_extended(current_dt.jd, keys, current_geo, num_days) } else { Vec::new() };
-  thread::sleep(micro_interval);
-  Json(json!({ "valid": valid, "date": current_dt, "geo": current_geo, "historicDate": historic_dt, "historicGeo": historic_geo, "days": num_days, "transposedTransitions": transitions, "currentTransitions": current_transitions })) */
   let params = payload.into_inner();
-  let bodies = params.clone().bodies.unwrap_or(vec![]);
-  let lngs = params.clone().lngs.unwrap_or(vec![]);
-  let positions: HashMap<String, f64> = params.positions.unwrap_or(HashMap::new());
+  let date = to_date_object_by_ref(&params);
+  let start_jd = date.jd - 1f64;
+  let num_days = params.days.unwrap_or(2) + 1;
+  let positions: Vec<BodyPos> = params.positions.unwrap_or(vec![]).into_iter().map(|p| p.to_body_pos()).collect();
+  let bodies: Vec<String> = positions.clone().into_iter().map(|p| p.key).collect();
+  let current_geo = params.geo.unwrap_or(LngLat::empty());
+  let historic_geo = params.geo2.unwrap_or(current_geo);
+  let transposed_sets = calc_transposed_transitions_from_source_body_positions(start_jd, current_geo.to_geo_pos(), positions.clone(), num_days);
+  let transition_sets = get_transition_sets_extended(start_jd, bodies, current_geo.to_geo_pos(), num_days);
+  let tzs = params.tzs.unwrap_or(0i32);
+  let periods = calc_solar_periods(date.jd, current_geo.to_geo_pos(), tzs);
   thread::sleep(micro_interval);
-  Json(json!({ "valid": false, "bodies": bodies, "lngs": lngs, "positions": positions }))
+  Json(json!({ "valid": false, "transposedTransitions": transposed_sets, "currentTransitions": transition_sets, "positions": positions, "periods": periods, "currentGeo": current_geo, "historicGeo": historic_geo }))
 }
 
 #[get("/test-transitions")]

@@ -15,13 +15,12 @@ async fn date_info_geo(params: Query<InputOptions>) -> impl Responder {
   let date = to_date_object(&params);
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
-  let tz_secs =  params.tzs.clone().unwrap_or(0i16);
+  let tz_secs =  params.tzs.clone().unwrap_or(0i32);
   let iso_mode: bool = params.iso.clone().unwrap_or(0) > 0;
-  let offset_secs = if tz_secs != 0i16 { Some(tz_secs) } else { None };
+  let offset_secs = if tz_secs != 0i32 { Some(tz_secs) } else { None };
   let (indian, prev, base, next, calc_offset_secs) = to_indian_time_with_transitions(date.jd, geo, offset_secs, iso_mode);
   Json(json!({ "date": date, "indianTime": indian,  "offsetSecs": calc_offset_secs, "sun": { "prev": prev, "current": base, "next": next } }))
 }
-
 
 #[get("/test-geo-start")]
 async fn test_geo_start(params: Query<InputOptions>) -> impl Responder {

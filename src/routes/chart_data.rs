@@ -74,7 +74,7 @@ pub async fn chart_data_flexi(params: Query<InputOptions>) -> impl Responder {
   let loc: String = params.loc.clone().unwrap_or("0,0".to_string());
   let geo = if let Some(geo_pos) = loc_string_to_geo(loc.as_str()) { geo_pos } else { GeoPos::zero() };
   let show_transitions: bool = params.ct.clone().unwrap_or(0) > 0;
-  let (aya_keys, aya_mode) = to_ayanamsha_keys(&params, "true_citra");
+  let (aya_keys, aya_mode, aya) = to_ayanamsha_keys(&params, "true_citra");
   let hsys_str = params.hsys.clone().unwrap_or("W".to_string());
   let match_all_houses = hsys_str.to_lowercase().as_str() == "all";
   let h_systems: Vec<char> = if match_all_houses { vec![] } else { match_house_systems_chars(hsys_str) };
@@ -95,7 +95,7 @@ pub async fn chart_data_flexi(params: Query<InputOptions>) -> impl Responder {
   let iso_mode: bool = params.iso.clone().unwrap_or(0) > 0;
   let tz_secs = params.tzs.clone().unwrap_or(-1);
   let offset_secs = if tz_secs == -1 { None } else { Some(tz_secs) };
-  let aya: String = params.aya.clone().unwrap_or("true_citra".to_string());
+  //let aya: String = params.aya.clone().unwrap_or("true_citra".to_string());
   let sidereal: bool = params.sid.unwrap_or(0) > 0;
   let ayanamsha = get_ayanamsha_value(date.jd, aya.as_str());
   let aya_offset = if sidereal { ayanamsha } else { 0f64 };
@@ -166,8 +166,7 @@ async fn bodies_progress(params: Query<InputOptions>) -> impl Responder {
   let micro_interval = time::Duration::from_millis(20 + (num_samples / 4) as u64);
   let keys = body_keys_str_to_keys_or(key_string, def_keys);
   let geo_opt = if topo { Some(geo) } else { None };
-  let (aya_keys, aya_mode) = to_ayanamsha_keys(&params, "");
-  let aya: String = params.aya.clone().unwrap_or("true_citra".to_string());
+  let (aya_keys, aya_mode, aya) = to_ayanamsha_keys(&params, "");
   let sidereal: bool = params.sid.unwrap_or(0) > 0;
   let ayanamsha = get_ayanamsha_value(date.jd, aya.as_str());
   let aya_offset = if sidereal { ayanamsha } else { 0f64 };
