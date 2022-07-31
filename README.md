@@ -124,7 +124,7 @@ Show retrograde start, retrograde peak, retrograde end and forward peak speeds o
 
 ### GET /transposed-transitions
 
-This shows the proejcted transitions of historic celestial body positions transposed onto the current or referenced time and place. It may be used for natal transitions.
+This shows the projected transitions of historic celestial body positions transposed onto the current or referenced time and place. It may be used for natal transitions.
 
 Query string parameters:
 
@@ -134,6 +134,18 @@ Query string parameters:
 * dt2: date of source chart
 * loc2: coordinates of source chart
 * iso: 0 = show julian days (default), 1 = show ISO datetime UTC
+
+### POST /transposed-transition-sets
+
+This shows the projected transitions of any celestial body positions transposed onto the current or referenced time and place. It may be used for natal transitions.
+
+JSON payload parameters:
+
+* dt: referenced date-time
+* geo: current lat,lng coordinates
+* positions: set of BodyPos objects with lng, lat, lngSpeed and key for each historical body.
+* geo2: historical lat, lng coordinates
+* tzs: time zone offset in seconds to calculate midnight
 
 ### GET /test-transitions
 
