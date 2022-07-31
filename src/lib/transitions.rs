@@ -514,6 +514,14 @@ pub fn start_jd_geo(jd: f64, lng: f64) -> f64 {
   }
 }
 
+pub fn start_jd_geo_tz(jd: f64, lng: f64, tz_offset: Option<i32>) -> f64 {
+  let lng_offset = match tz_offset {
+    Some(tzs) => tzs as f64 / 240f64,
+    _ => lng,
+  };
+  start_jd_geo(jd, lng_offset)
+}
+
 pub fn get_transition_sets(jd: f64, keys: Vec<&str>, geo: GeoPos) -> Vec<KeyNumValueSet> {
   let mut transit_sets: Vec<KeyNumValueSet> = Vec::new();
   for key in keys {
@@ -592,11 +600,12 @@ pub fn to_indian_time(jd: f64, geo: GeoPos, offset_tz_secs: Option<i32>, iso_mod
   i_time
 }
 
-pub fn calc_solar_periods(jd: f64, geo: GeoPos, offset_secs: i32) -> Vec<KeyNumRange> {
+pub fn calc_solar_periods(jd: f64, geo: GeoPos, tz_offset: Option<i32>) -> (f64, Vec<KeyNumRange>) {
   let mut periods: Vec<KeyNumRange> = vec![];
-  //let (iItime, prev, curr, next, tzs) = to_indian_time_with_transitions(jd, geo, Some(offset_secs), false);
-  let start_jd = start_jd_geo(jd, geo.lng) - 1f64;
+  let period_start_jd = start_jd_geo_tz(jd, geo.lng, tz_offset);
+  let start_jd = period_start_jd - 1f64;
   let mut prev_set = 0f64;
+  let mut prev_start = 0f64;
   for i in 0..3 {
     let ref_jd = start_jd + (i as f64);
     let alt_set: AltTransitionSet = calc_transition_set_alt(ref_jd, Bodies::Sun, geo.lat, geo.lng);
@@ -606,15 +615,22 @@ pub fn calc_solar_periods(jd: f64, geo: GeoPos, offset_secs: i32) -> Vec<KeyNumR
     if prev_set > 1_000_000f64 && prev_set < alt_set.rise {
       periods.push(KeyNumRange::new("night", prev_set, alt_set.rise));
     }
+    if alt_set.rise == 0f64 || alt_set.set == 0f64 {
+      if prev_start > 0f64 {
+        let range = if alt_set.max <= 0f64 { KeyNumRange::new("night", prev_start, alt_set.mc) } else { KeyNumRange::new("day", prev_start, alt_set.ic) };
+        periods.push(range);
+      }
+      prev_start =  if alt_set.max <= 0f64 { alt_set.mc } else { alt_set.ic };
+    }
     prev_set = alt_set.set;
   }
   periods.sort_by(|a,b| a.start.partial_cmp(&b.start).unwrap());
-  periods
+  (period_start_jd, periods)
 }
 
 #[cfg(test)]
 mod tests {
-  use super::start_jd_geo;
+  use super::{start_jd_geo, start_jd_geo_tz};
     #[test]
     fn has_correct_geo_day_start_offset() {
         let ref_jd = 2459731.875;
@@ -628,4 +644,49 @@ mod tests {
         assert_eq!(start_jd1, expected_start_1);
         assert_eq!(start_jd2, expected_start_2);
     }
+
+
+
+  #[test]
+  fn has_correct_geo_day_start_tz_offset_east() {
+    let ref_jd = 2459731.875;
+    let day_start_utc_jd = 2459731.5;
+    let lng1 = 84f64; // 84ºE
+    let tzs1 = 18000i32;
+    let start_jd1 = start_jd_geo_tz(ref_jd, lng1, Some(tzs1));
+    let expected_start_1 = day_start_utc_jd - (5f64 / 24f64);
+    assert_eq!(start_jd1, expected_start_1);
+}
+
+    #[test]
+    fn has_correct_geo_day_start_tz_offset_west() {
+      let ref_jd = 2459731.875;
+      let day_start_utc_jd = 2459731.5;
+      let lng2 = -84f64;
+      let tzs2 = -18000i32;
+      let start_jd2 = start_jd_geo_tz(ref_jd, lng2, Some(tzs2));
+      let expected_start_2 = day_start_utc_jd + (5f64 / 24f64);
+      assert_eq!(start_jd2, expected_start_2);
+  }
+
+  #[test]
+    fn has_correct_geo_day_start_tz_offset_east_none() {
+      let ref_jd = 2459731.875;
+      let day_start_utc_jd = 2459731.5;
+      let lng1 = 84f64; // 84ºE
+      let start_jd3 = start_jd_geo_tz(ref_jd, lng1, None);
+      let expected_start_3 = day_start_utc_jd - (5.6f64 / 24f64);
+      assert_eq!(start_jd3, expected_start_3);
+  }
+
+  #[test]
+    fn has_correct_geo_day_start_tz_offset_west_none() {
+      let ref_jd = 2459731.875;
+      let day_start_utc_jd = 2459731.5;
+      let lng2 = -84f64; // 84ºW
+      let start_jd4 = start_jd_geo_tz(ref_jd, lng2, None);
+      let expected_start_4 = day_start_utc_jd + (5.6f64 / 24f64);
+      assert_eq!(start_jd4, expected_start_4);
+  }
+
 }

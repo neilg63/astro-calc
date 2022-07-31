@@ -80,10 +80,10 @@ pub fn recalc_houses(positions: Vec<f64>, ayanamsha: f64, ascendant: Option<f64>
   offsets
 }
 
-pub fn recalc_houses_whole(ascendant: f64, ayanamsha: f64) -> Vec<f64> {
+/* pub fn recalc_houses_whole(ascendant: f64, ayanamsha: f64) -> Vec<f64> {
   recalc_houses(vec![], ayanamsha, Some(ascendant), Some('W'))
 }
-
+ */
 pub fn recalc_houses_by_system(positions: Vec<f64>, ayanamsha: f64, system: char) -> Vec<f64> {
   recalc_houses(positions, ayanamsha, None, Some(system))
 }
