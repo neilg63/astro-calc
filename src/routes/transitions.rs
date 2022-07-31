@@ -1,11 +1,9 @@
 use std::{thread, time};
 use serde_json::*;
-use std::collections::HashMap;
 use actix_web::{get, post, Responder,web::{Query, Json}};
 use super::super::{query_params::*, reset_ephemeris_path, post_params::*};
 use super::super::lib::{
   traits::{FromKey},
-  julian_date::{current_jd},
   transitions::*,
   transposed_transitions::{calc_transposed_graha_transitions_from_source_refs_topo, calc_transposed_graha_transitions_from_source_refs_geo, calc_transposed_transitions_from_source_body_positions},
   models::{geo_pos::*, general::*, graha_pos::{BodyPos}},
@@ -86,7 +84,7 @@ async fn body_transposed_transitions_range(params: Query<InputOptions>) -> impl 
   Json(json!({ "valid": valid, "date": current_dt, "geo": current_geo, "historicDate": historic_dt, "historicGeo": historic_geo, "days": num_days, "transposedTransitions": transitions, "currentTransitions": current_transitions }))
 }
 
-#[post("/transposed-transitions-chart")]
+#[post("/transposed-transition-sets")]
 async fn body_transposed_transitions_from_chart(payload: Json<PostOptions>) -> impl Responder {
   reset_ephemeris_path();
   let micro_interval = time::Duration::from_millis(50);
@@ -100,10 +98,10 @@ async fn body_transposed_transitions_from_chart(payload: Json<PostOptions>) -> i
   let historic_geo = params.geo2.unwrap_or(current_geo);
   let transposed_sets = calc_transposed_transitions_from_source_body_positions(start_jd, current_geo.to_geo_pos(), positions.clone(), num_days);
   let transition_sets = get_transition_sets_extended(start_jd, bodies, current_geo.to_geo_pos(), num_days);
-  let tzs = params.tzs.unwrap_or(0i32);
-  let periods = calc_solar_periods(date.jd, current_geo.to_geo_pos(), tzs);
+  let offset_tzs = params.tzs;
+  let (period_start, periods) = calc_solar_periods(date.jd, current_geo.to_geo_pos(), offset_tzs);
   thread::sleep(micro_interval);
-  Json(json!({ "valid": false, "transposedTransitions": transposed_sets, "currentTransitions": transition_sets, "positions": positions, "periods": periods, "currentGeo": current_geo, "historicGeo": historic_geo }))
+  Json(json!({ "valid": false, "transposedTransitions": transposed_sets, "currentTransitions": transition_sets, "positions": positions, "periodStart": period_start, "periods": periods, "currentGeo": current_geo, "historicGeo": historic_geo }))
 }
 
 #[get("/test-transitions")]
