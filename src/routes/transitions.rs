@@ -101,7 +101,7 @@ async fn body_transposed_transitions_from_chart(payload: Json<PostOptions>) -> i
   let offset_tzs = params.tzs;
   let (period_start, periods) = calc_solar_periods(date.jd, current_geo.to_geo_pos(), offset_tzs);
   thread::sleep(micro_interval);
-  Json(json!({ "valid": false, "transposedTransitions": transposed_sets, "currentTransitions": transition_sets, "positions": positions, "periodStart": period_start, "periods": periods, "currentGeo": current_geo, "historicGeo": historic_geo }))
+  Json(json!({ "valid": false, "transposedTransitions": transposed_sets, "currentTransitions": transition_sets, "periodStart": period_start, "periods": periods, "currentGeo": current_geo, "historicGeo": historic_geo }))
 }
 
 #[get("/test-transitions")]
