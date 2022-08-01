@@ -137,15 +137,21 @@ Query string parameters:
 
 ### POST /transposed-transition-sets
 
-This shows the projected transitions of any celestial body positions transposed onto the current or referenced time and place. It may be used for natal transitions.
+This shows the current and transposed transitions of any celestial body positions. It may be used for natal transitions based on the positions of the sun, moon and planets at someone's time and place of birth. The response shows transitions and day periods (between sun rise and sun set) over three days centred on the referenced date. This endpoint may be used to transform data captured with GET /chart-data .
 
 JSON payload parameters:
 
-* dt: referenced date-time
+* dt: referenced date-time. It defaults to the current date.
 * geo: current lat,lng coordinates
-* positions: set of BodyPos objects with lng, lat, lngSpeed and key for each historical body.
-* geo2: historical lat, lng coordinates
+* positions: set of BodyPos objects with lng, lat, lngSpeed and key attributes for each historical body.
+* geo2: historical lat, lng coordinates (for reference purposes only)
 * tzs: time zone offset in seconds to calculate midnight
+
+#### Reesponse
+
+* currentTransitions: array of current transition items (centred on the current or referenced time)
+* transposedTransitions: array of transition items based on historical coordinates transposed onto the current night sky
+* periods: Sequence of day and night periods defined by sun rise and sun set
 
 ### GET /test-transitions
 
